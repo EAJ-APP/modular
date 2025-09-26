@@ -1,72 +1,68 @@
 import streamlit as st
-import utils  # Importa el archivo utils.py en raíz
 import sys
 import os
 
-# Añadir el directorio actual al path para que Python encuentre los módulos
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Debug: mostrar estructura de archivos
+st.title("🔧 Debug - Estructura de Módulos")
+
+# Verificar qué hay en utils/
+st.subheader("📁 Contenido de utils/")
+if os.path.exists("utils"):
+    st.write("Archivos en utils/:")
+    for file in os.listdir("utils"):
+        st.write(f"- {file}")
+        
+        # Mostrar contenido de __init__.py
+        if file == "__init__.py":
+            st.code("Contenido de utils/__init__.py:")
+            with open(os.path.join("utils", file), "r") as f:
+                st.code(f.read())
+else:
+    st.error("❌ No existe la carpeta utils/")
+
+# Intentar imports paso a paso
+st.subheader("🔄 Probando imports...")
 
 try:
-    from config.settings import Settings
-    from utils.helpers import setup_environment, check_dependencies
-    from database.connection import get_bq_client
-    from ui import render_sidebar, get_project_dataset_selection, show_cookies_tab, show_ecommerce_tab
+    st.write("1. Intentando importar desde utils.error_handling...")
+    from utils.error_handling import check_dependencies, handle_bq_error
+    st.success("✅ utils.error_handling importado correctamente")
 except ImportError as e:
-    st.error(f"Error de importación: {e}")
-    st.info("Verifica la estructura de archivos y que todos los __init__.py existan")
-    st.stop()
+    st.error(f"❌ Error importando error_handling: {e}")
 
-def main():
-    """Función principal de la aplicación"""
-    # Configuración inicial
-    check_dependencies()
+try:
+    st.write("2. Intentando importar desde utils.helpers...")
+    from utils.helpers import setup_environment
+    st.success("✅ utils.helpers importado correctamente")
+except ImportError as e:
+    st.error(f"❌ Error importando helpers: {e}")
+
+try:
+    st.write("3. Intentando importar mediante utils/__init__.py...")
+    from utils import check_dependencies, setup_environment
+    st.success("✅ Import via __init__.py exitoso")
+    
+    # Probar las funciones
+    st.write("4. Probando funciones...")
     setup_environment()
+    check_dependencies()
+    st.success("✅ Todas las funciones funcionan correctamente")
     
-    # Configuración de página
-    st.set_page_config(
-        page_title=Settings.APP_TITLE, 
-        layout=Settings.PAGE_LAYOUT
-    )
-    st.title(Settings.APP_TITLE)
+except ImportError as e:
+    st.error(f"❌ Error en import via __init__.py: {e}")
 
-    # Renderizar sidebar y obtener configuración
-    development_mode, start_date, end_date = render_sidebar()
-
-    # Conexión a BigQuery
-    client = get_bq_client(
-        st.session_state.creds if development_mode and "creds" in st.session_state else None
-    )
-
-    # Selectores de proyecto y dataset
-    try:
-        selected_project, selected_dataset = get_project_dataset_selection(client)
-    except Exception as e:
-        st.error("Error al cargar proyectos y datasets")
-        st.error(str(e))
-        return
-
-    # Tabs principales
-    tab_titles = [
-        "🍪 Cookies y Privacidad",
-        "🛒 Ecommerce", 
-        "📈 Adquisición",
-        "🎯 Eventos",
-        "👥 Usuarios",
-        "🕒 Sesiones"
-    ]
-    tab_ids = ["cookies", "ecommerce", "acquisition", "events", "users", "sessions"]
+# Mostrar árbol de archivos completo
+st.subheader("🌳 Árbol completo de archivos")
+for root, dirs, files in os.walk("."):
+    # Ignorar carpetas ocultas
+    dirs[:] = [d for d in dirs if not d.startswith('.')]
+    files = [f for f in files if not f.startswith('.') and f.endswith('.py')]
     
-    tabs = st.tabs(tab_titles)
-    
-    for tab, tab_id in zip(tabs, tab_ids):
-        with tab:
-            st.header(f"Análisis de {tab_id.capitalize()}")
-            if tab_id == "cookies":
-                show_cookies_tab(client, selected_project, selected_dataset, start_date, end_date)
-            elif tab_id == "ecommerce":
-                show_ecommerce_tab(client, selected_project, selected_dataset, start_date, end_date)
-            else:
-                st.info(f"🔧 Sección en desarrollo. Próximamente: consultas para {tab_id}")
+    level = root.replace(".", "").count(os.sep)
+    indent = " " * 2 * level
+    st.text(f"{indent}{os.path.basename(root)}/")
+    subindent = " " * 2 * (level + 1)
+    for file in files:
+        st.text(f"{subindent}{file}")
 
-if __name__ == "__main__":
-    main()
+st.stop()
