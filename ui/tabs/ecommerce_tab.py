@@ -3,15 +3,15 @@ from database.queries import (
     generar_query_comparativa_eventos,
     generar_query_ingresos_transacciones,
     generar_query_productos_mas_vendidos,
-    generar_query_relacion_productos,
-    generar_query_funnel_por_producto
+    generar_query_relacion_productos
+    # ELIMINAR: generar_query_funnel_por_producto
 )
 from visualization.ecommerce_visualizations import (
     mostrar_comparativa_eventos,
     mostrar_ingresos_transacciones,
     mostrar_productos_mas_vendidos,
-    mostrar_relacion_productos,
-    mostrar_funnel_por_producto
+    mostrar_relacion_productos
+    # ELIMINAR: mostrar_funnel_por_producto
 )
 from database.connection import run_query
 
@@ -45,9 +45,4 @@ def show_ecommerce_tab(client, project, dataset, start_date, end_date):
                 df = run_query(client, query)
                 mostrar_relacion_productos(df)
     
-    with st.expander("📈 Funnel de Conversión por Producto", expanded=True):
-        if st.button("Analizar Funnel por Producto", key="btn_funnel_producto"):
-            with st.spinner("Analizando funnel por producto..."):
-                query = generar_query_funnel_por_producto(project, dataset, start_date, end_date)
-                df = run_query(client, query)
-                mostrar_funnel_por_producto(df)
+    # SECCIÓN ELIMINADA: Funnel de Conversión por Producto
