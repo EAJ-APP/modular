@@ -1,8 +1,19 @@
 import streamlit as st
-from config.settings import Settings
-from utils.helpers import setup_environment, check_dependencies
-from database.connection import get_bq_client
-from ui import render_sidebar, get_project_dataset_selection, show_cookies_tab, show_ecommerce_tab
+import sys
+import os
+
+# Añadir el directorio actual al path para que Python encuentre los módulos
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from config.settings import Settings
+    from utils.helpers import setup_environment, check_dependencies
+    from database.connection import get_bq_client
+    from ui import render_sidebar, get_project_dataset_selection, show_cookies_tab, show_ecommerce_tab
+except ImportError as e:
+    st.error(f"Error de importación: {e}")
+    st.info("Verifica la estructura de archivos y que todos los __init__.py existan")
+    st.stop()
 
 def main():
     """Función principal de la aplicación"""
@@ -30,6 +41,7 @@ def main():
         selected_project, selected_dataset = get_project_dataset_selection(client)
     except Exception as e:
         st.error("Error al cargar proyectos y datasets")
+        st.error(str(e))
         return
 
     # Tabs principales
