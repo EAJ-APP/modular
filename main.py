@@ -1,4 +1,5 @@
 import streamlit as st
+import utils  # Importa el archivo utils.py en raíz
 import sys
 import os
 
