@@ -1,6 +1,11 @@
-streamlit==1.32.2
 google-cloud-bigquery==3.20.1
-pandas==2.1.4
-plotly==5.18.0
 db-dtypes==1.1.1
 protobuf==4.25.3
+numpy==1.26.4
+pandas==2.2.1
+streamlit==1.32.2
+
+# Para las consultas por tabs
+plotly==5.18.0  # Para los gráficos avanzados
+pandas==2.2.1
+matplotlib==3.8.0  # Para estilos en tablas
