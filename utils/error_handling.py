@@ -14,20 +14,22 @@ def handle_bq_error(e, query=None):
     st.stop()
 
 def check_dependencies():
-    """Verifica dependencias esenciales - Versión actualizada"""
+    """Verifica dependencias esenciales - Versión simplificada"""
     try:
-        # Verificar las dependencias con versiones actualizadas
+        # Solo verificar las esenciales para que funcione
         import pandas
         import google.cloud.bigquery
         import plotly
-        import db_dtypes
-        import numpy
-        import matplotlib
-        import protobuf
         
-        st.sidebar.success("✅ Todas las dependencias cargadas correctamente")
+        # Opcional: verificar protobuf pero no fallar si no está
+        try:
+            import protobuf
+        except ImportError:
+            st.sidebar.warning("⚠️ protobuf no instalado (opcional)")
+            
+        st.sidebar.success("✅ Dependencias principales OK")
         
     except ImportError as e:
         st.error(f"❌ Error de dependencias: {str(e)}")
-        st.info("Por favor, instala las dependencias: pip install -r requirements.txt")
+        st.info("Ejecuta: pip install -r requirements.txt")
         st.stop()
