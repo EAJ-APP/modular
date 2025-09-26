@@ -4,4 +4,3 @@ pandas>=2.1.0
 plotly>=5.18.0
 db-dtypes==1.2.0
 matplotlib==3.8.0
-protobuf>=4.25.3
