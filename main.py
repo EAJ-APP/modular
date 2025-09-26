@@ -2,131 +2,72 @@ import streamlit as st
 import sys
 import os
 
-# Configuración básica inicial
-st.set_page_config(page_title="GA4 Explorer", layout="wide")
-st.title("📊 Análisis Exploratorio GA4")
-
-# Verificar dependencias críticas
-try:
-    import google.cloud.bigquery
-    st.success("✅ google-cloud-bigquery importado correctamente")
-except ImportError:
-    st.error("❌ google-cloud-bigquery no está instalado")
-    st.info("""
-    **Solución:**
-    1. Ejecuta: `pip install google-cloud-bigquery==3.20.1`
-    2. O usa el requirements.txt simplificado
-    """)
-    st.stop()
+# Añadir el path para imports relativos
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    import pandas as pd
-    st.success("✅ pandas importado correctamente")
-except ImportError:
-    st.error("❌ pandas no está instalado")
-    st.stop()
-
-try:
-    import plotly
-    st.success("✅ plotly importado correctamente")
-except ImportError:
-    st.error("❌ plotly no está instalado")
-    st.stop()
-
-# Ahora intentar imports modulares
-try:
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    
     from config.settings import Settings
     from utils import setup_environment, check_dependencies
     from database.connection import get_bq_client
     from ui import render_sidebar, get_project_dataset_selection, show_cookies_tab, show_ecommerce_tab
     
-    st.success("✅ Todos los módulos importados correctamente")
+    st.sidebar.success("✅ Módulos importados correctamente")
     
 except ImportError as e:
-    st.error(f"❌ Error de importación modular: {e}")
-    st.info("Usando modo de compatibilidad...")
-    
-    # Modo de compatibilidad - definir funciones básicas localmente
-    def setup_environment():
-        import warnings
-        warnings.filterwarnings("ignore")
-    
-    def check_dependencies():
-        pass  # Ya verificamos arriba
+    st.error(f"❌ Error de importación: {e}")
+    st.stop()
 
-# Función principal
 def main():
-    setup_environment()
+    """Función principal de la aplicación"""
+    # Configuración inicial
     check_dependencies()
+    setup_environment()
+    
+    # Configuración de página
+    st.set_page_config(
+        page_title=Settings.APP_TITLE, 
+        layout=Settings.PAGE_LAYOUT
+    )
+    st.title(Settings.APP_TITLE)
 
-    # Sidebar básico
-    with st.sidebar:
-        st.header("🔧 Configuración")
-        development_mode = st.toggle("Modo desarrollo (usar JSON local)")
-        
-        if development_mode:
-            creds_file = st.file_uploader("Sube credenciales JSON", type=["json"])
-            if creds_file:
-                with open("temp_creds.json", "wb") as f:
-                    f.write(creds_file.getvalue())
-                st.session_state.creds = "temp_creds.json"
-        elif "gcp_service_account" not in st.secrets:
-            st.error("⚠️ Configura los Secrets en Streamlit Cloud")
-            st.stop()
-
-        st.header("📅 Rango de Fechas")
-        start_date = st.date_input("Fecha inicio", value=pd.to_datetime("2023-01-01"))
-        end_date = st.date_input("Fecha fin", value=pd.to_datetime("today"))
+    # Renderizar sidebar y obtener configuración
+    development_mode, start_date, end_date = render_sidebar()
 
     # Conexión a BigQuery
-    try:
-        client = get_bq_client(
-            st.session_state.creds if development_mode and "creds" in st.session_state else None
-        )
-        st.sidebar.success("✅ Conectado a BigQuery")
-    except Exception as e:
-        st.error(f"❌ Error de conexión: {e}")
-        return
+    client = get_bq_client(
+        st.session_state.creds if development_mode and "creds" in st.session_state else None
+    )
 
     # Selectores de proyecto y dataset
     try:
-        projects = [p.project_id for p in client.list_projects()]
-        selected_project = st.sidebar.selectbox("Proyecto", projects)
-        datasets = [d.dataset_id for d in client.list_datasets(selected_project)]
-        selected_dataset = st.sidebar.selectbox("Dataset GA4", datasets)
-        
-        st.sidebar.success(f"✅ Proyecto: {selected_project}, Dataset: {selected_dataset}")
+        selected_project, selected_dataset = get_project_dataset_selection(client)
+        st.sidebar.success(f"✅ {selected_project}.{selected_dataset}")
     except Exception as e:
-        st.error(f"❌ Error cargando proyectos: {e}")
+        st.error(f"Error al cargar proyectos y datasets: {e}")
         return
 
     # Tabs principales
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "🍪 Cookies y Privacidad", "🛒 Ecommerce", "📈 Adquisición", 
-        "🎯 Eventos", "👥 Usuarios", "🕒 Sesiones"
-    ])
+    tab_titles = [
+        "🍪 Cookies y Privacidad",
+        "🛒 Ecommerce", 
+        "📈 Adquisición",
+        "🎯 Eventos",
+        "👥 Usuarios",
+        "🕒 Sesiones"
+    ]
+    tab_ids = ["cookies", "ecommerce", "acquisition", "events", "users", "sessions"]
     
-    with tab1:
-        st.header("Análisis de Cookies")
-        show_cookies_tab(client, selected_project, selected_dataset, start_date, end_date)
+    tabs = st.tabs(tab_titles)
     
-    with tab2:
-        st.header("Análisis de Ecommerce")
-        show_ecommerce_tab(client, selected_project, selected_dataset, start_date, end_date)
-    
-    with tab3:
-        st.info("🔧 Sección en desarrollo. Próximamente: Adquisición")
-    
-    with tab4:
-        st.info("🔧 Sección en desarrollo. Próximamente: Eventos")
-    
-    with tab5:
-        st.info("🔧 Sección en desarrollo. Próximamente: Usuarios")
-    
-    with tab6:
-        st.info("🔧 Sección en desarrollo. Próximamente: Sesiones")
+    for tab, tab_id in zip(tabs, tab_ids):
+        with tab:
+            st.header(f"Análisis de {tab_id.capitalize()}")
+            if tab_id == "cookies":
+                show_cookies_tab(client, selected_project, selected_dataset, start_date, end_date)
+            elif tab_id == "ecommerce":
+                show_ecommerce_tab(client, selected_project, selected_dataset, start_date, end_date)
+            else:
+                st.info(f"🔧 Sección en desarrollo. Próximamente: consultas para {tab_id}")
 
 if __name__ == "__main__":
     main()
