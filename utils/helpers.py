@@ -1,4 +1,3 @@
-import pandas as pd
 import warnings
 
 def setup_environment():
