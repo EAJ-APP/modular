@@ -192,3 +192,125 @@ def mostrar_atribucion_marketing(df):
     )
     fig_eficiencia.update_layout(xaxis_tickangle=-45)
     st.plotly_chart(fig_eficiencia, use_container_width=True)
+
+def mostrar_atribucion_multimodelo(df):
+    """Visualización para análisis de atribución multi-modelo"""
+    st.subheader("🎯 Atribución Multi-Modelo")
+    
+    if df.empty:
+        st.warning("No hay datos de atribución multi-modelo para el rango seleccionado")
+        return
+    
+    # Mostrar resumen por modelo
+    st.subheader("📊 Resumen por Modelo de Atribución")
+    
+    model_summary = df.groupby('attribution_model').agg({
+        'sessions': 'sum',
+        'conversions': 'sum',
+        'revenue': 'sum',
+        'attributed_conversions': 'sum',
+        'attributed_revenue': 'sum'
+    }).reset_index()
+    
+    # Métricas comparativas
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        total_revenue = df['revenue'].sum() / 3  # Dividido por 3 modelos para evitar duplicación
+        st.metric("Ingresos Totales", f"€{total_revenue:,.2f}")
+    with col2:
+        total_conversions = df['conversions'].sum() / 3
+        st.metric("Conversiones Totales", f"{total_conversions:,.0f}")
+    with col3:
+        avg_attribution_rate = model_summary['attributed_conversions'].mean()
+        st.metric("Tasa Atribución Promedio", f"{avg_attribution_rate:.1f}%")
+    with col4:
+        models_count = len(model_summary)
+        st.metric("Modelos Analizados", f"{models_count}")
+    
+    # Gráfico comparativo entre modelos
+    st.subheader("📈 Comparativa entre Modelos")
+    
+    fig_comparison = px.bar(
+        model_summary,
+        x='attribution_model',
+        y='attributed_revenue',
+        title='Ingresos Atribuidos por Modelo',
+        labels={'attribution_model': 'Modelo', 'attributed_revenue': 'Ingresos Atribuidos (€)'},
+        color='attribution_model',
+        color_discrete_sequence=px.colors.qualitative.Set3
+    )
+    st.plotly_chart(fig_comparison, use_container_width=True)
+    
+    # Análisis detallado por modelo
+    st.subheader("🔍 Análisis Detallado por Modelo")
+    
+    for model in df['attribution_model'].unique():
+        with st.expander(f"Modelo: {model}", expanded=False):
+            model_data = df[df['attribution_model'] == model].nlargest(10, 'attributed_revenue')
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Top canales por ingresos atribuidos
+                fig_channels = px.bar(
+                    model_data,
+                    x='utm_source',
+                    y='attributed_revenue',
+                    title=f'Top Canales - {model}',
+                    labels={'utm_source': 'Fuente', 'attributed_revenue': 'Ingresos Atribuidos (€)'},
+                    color='utm_medium'
+                )
+                st.plotly_chart(fig_channels, use_container_width=True)
+            
+            with col2:
+                # Scatter plot: sesiones vs conversiones atribuidas
+                fig_scatter = px.scatter(
+                    model_data,
+                    x='sessions',
+                    y='attributed_conversions',
+                    size='attributed_revenue',
+                    color='utm_medium',
+                    hover_name='utm_campaign',
+                    title=f'Eficiencia - {model}',
+                    labels={
+                        'sessions': 'Sesiones',
+                        'attributed_conversions': 'Conversiones Atribuidas',
+                        'attributed_revenue': 'Ingresos Atribuidos'
+                    }
+                )
+                st.plotly_chart(fig_scatter, use_container_width=True)
+            
+            # Mostrar tabla detallada
+            st.dataframe(model_data.style.format({
+                'sessions': '{:,}',
+                'conversions': '{:,}',
+                'revenue': '€{:,.2f}',
+                'attributed_conversions': '{:.2f}',
+                'attributed_revenue': '€{:,.2f}',
+                'attribution_rate': '{:.2f}%'
+            }))
+    
+    # Análisis de diferencias entre modelos
+    st.subheader("🔄 Diferencias entre Modelos")
+    
+    # Pivot para comparar modelos
+    pivot_df = df.pivot_table(
+        index=['utm_source', 'utm_medium'],
+        columns='attribution_model',
+        values='attributed_revenue',
+        aggfunc='sum'
+    ).reset_index().fillna(0)
+    
+    if len(pivot_df) > 0:
+        # Calcular variación entre modelos
+        if 'Last Click' in pivot_df.columns and 'First Click' in pivot_df.columns:
+            pivot_df['diferencia_lc_fc'] = pivot_df['Last Click'] - pivot_df['First Click']
+            
+            st.write("**Canales con Mayor Diferencia entre Last Click y First Click:**")
+            top_differences = pivot_df.nlargest(5, 'diferencia_lc_fc')
+            st.dataframe(top_differences.style.format({
+                'Last Click': '€{:,.2f}',
+                'First Click': '€{:,.2f}',
+                'Linear': '€{:,.2f}',
+                'diferencia_lc_fc': '€{:,.2f}'
+            }))
