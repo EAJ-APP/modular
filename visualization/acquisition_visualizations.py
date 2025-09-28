@@ -337,7 +337,7 @@ def mostrar_atribucion_completa(df):
         - **🤖 Data Driven**: Combinación algorítmica de múltiples factores
         """)
     
-    # Resumen ejecutivo - CORREGIDO
+    # Resumen ejecutivo
     st.subheader("📈 Resumen Ejecutivo")
     
     total_models = df['attribution_model'].nunique()
@@ -428,59 +428,76 @@ def mostrar_atribucion_completa(df):
             'variability': '{:.3f}'
         }))
     
-    # Análisis detallado por modelo
+    # CORRECCIÓN: Análisis detallado por modelo - Usar session_state para mantener el estado
     st.subheader("🔍 Análisis Detallado por Modelo")
     
+    # Inicializar session_state si no existe
+    if 'selected_model' not in st.session_state:
+        st.session_state.selected_model = df['attribution_model'].unique()[0] if len(df['attribution_model'].unique()) > 0 else ""
+    
+    # Selector que mantiene el estado
     selected_model = st.selectbox(
         "Seleccionar modelo para análisis detallado:",
-        df['attribution_model'].unique()
+        df['attribution_model'].unique(),
+        key='model_selector',
+        index=0  # Siempre seleccionar el primero por defecto
     )
+    
+    # Actualizar session_state cuando cambia la selección
+    if selected_model != st.session_state.selected_model:
+        st.session_state.selected_model = selected_model
+    
+    # Usar el modelo del session_state
+    selected_model = st.session_state.selected_model
     
     if selected_model:
         model_data = df[df['attribution_model'] == selected_model].nlargest(15, 'attributed_revenue')
         
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Top canales por ingresos
-            fig_top_channels = px.treemap(
-                model_data,
-                path=['utm_source', 'utm_medium'],
-                values='attributed_revenue',
-                title=f'Distribución de Ingresos - {selected_model}',
-                color='attributed_revenue',
-                color_continuous_scale='RdYlGn'
-            )
-            st.plotly_chart(fig_top_channels, use_container_width=True)
-        
-        with col2:
-            # Eficiencia por canal
-            fig_efficiency = px.scatter(
-                model_data.head(20),
-                x='touchpoints',
-                y='attributed_revenue',
-                size='conversion_rate',
-                color='utm_medium',
-                hover_name='utm_source',
-                title=f'Eficiencia por Canal - {selected_model}',
-                labels={
-                    'touchpoints': 'Touchpoints',
-                    'attributed_revenue': 'Ingresos Atribuidos (€)',
-                    'conversion_rate': 'Tasa Conversión'
-                }
-            )
-            st.plotly_chart(fig_efficiency, use_container_width=True)
-        
-        # Tabla detallada
-        st.dataframe(model_data.style.format({
-            'touchpoints': '{:,}',
-            'conversions': '{:,}',
-            'revenue': '€{:,.2f}',
-            'attributed_conversions': '{:.2f}',
-            'attributed_revenue': '€{:,.2f}',
-            'conversion_rate': '{:.2f}%',
-            'revenue_per_conversion': '€{:,.2f}'
-        }))
+        if not model_data.empty:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Top canales por ingresos
+                fig_top_channels = px.treemap(
+                    model_data,
+                    path=['utm_source', 'utm_medium'],
+                    values='attributed_revenue',
+                    title=f'Distribución de Ingresos - {selected_model}',
+                    color='attributed_revenue',
+                    color_continuous_scale='RdYlGn'
+                )
+                st.plotly_chart(fig_top_channels, use_container_width=True)
+            
+            with col2:
+                # Eficiencia por canal
+                fig_efficiency = px.scatter(
+                    model_data.head(20),
+                    x='touchpoints',
+                    y='attributed_revenue',
+                    size='conversion_rate',
+                    color='utm_medium',
+                    hover_name='utm_source',
+                    title=f'Eficiencia por Canal - {selected_model}',
+                    labels={
+                        'touchpoints': 'Touchpoints',
+                        'attributed_revenue': 'Ingresos Atribuidos (€)',
+                        'conversion_rate': 'Tasa Conversión'
+                    }
+                )
+                st.plotly_chart(fig_efficiency, use_container_width=True)
+            
+            # Tabla detallada
+            st.dataframe(model_data.style.format({
+                'touchpoints': '{:,}',
+                'conversions': '{:,}',
+                'revenue': '€{:,.2f}',
+                'attributed_conversions': '{:.2f}',
+                'attributed_revenue': '€{:,.2f}',
+                'conversion_rate': '{:.2f}%',
+                'revenue_per_conversion': '€{:,.2f}'
+            }))
+        else:
+            st.warning(f"No hay datos para el modelo {selected_model}")
     
     # Análisis por dispositivo
     st.subheader("📱 Análisis por Dispositivo")
