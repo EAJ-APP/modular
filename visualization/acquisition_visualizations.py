@@ -78,3 +78,117 @@ def mostrar_canales_trafico(df):
         st.info("🚀 **Canales Emergentes** (menos del 1% pero con potencial):")
         for _, channel in emerging_channels.iterrows():
             st.write(f"- **{channel['traffic_channel']}**: {channel['session_count']} sesiones ({channel['traffic_percentage']}%)")
+
+def mostrar_atribucion_marketing(df):
+    """Visualización para análisis de atribución de marketing"""
+    st.subheader("🎯 Atribución de Marketing por Canal UTM")
+    
+    if df.empty:
+        st.warning("No hay datos de atribución para el rango seleccionado")
+        return
+    
+    # Mostrar resumen ejecutivo
+    total_sessions = df['sessions'].sum()
+    total_conversions = df['conversions'].sum()
+    total_revenue = df['revenue'].sum()
+    overall_cr = (total_conversions / total_sessions * 100) if total_sessions > 0 else 0
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Sesiones", f"{total_sessions:,}")
+    with col2:
+        st.metric("Total Conversiones", f"{total_conversions:,}")
+    with col3:
+        st.metric("Ingresos Totales", f"€{total_revenue:,.2f}")
+    with col4:
+        st.metric("Tasa Conversión", f"{overall_cr:.2f}%")
+    
+    # Mostrar tabla de datos
+    st.dataframe(df.style.format({
+        'sessions': '{:,}',
+        'conversions': '{:,}',
+        'revenue': '€{:,.2f}',
+        'conversion_rate': '{:.2f}%'
+    }))
+    
+    # Análisis por medio
+    st.subheader("📊 Análisis por Medio de Marketing")
+    
+    medios_df = df.groupby('utm_medium').agg({
+        'sessions': 'sum',
+        'conversions': 'sum',
+        'revenue': 'sum'
+    }).reset_index()
+    
+    medios_df['conversion_rate'] = (medios_df['conversions'] / medios_df['sessions'] * 100).round(2)
+    medios_df = medios_df.sort_values('revenue', ascending=False)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Gráfico de ingresos por medio
+        fig_ingresos = px.bar(
+            medios_df,
+            x='utm_medium',
+            y='revenue',
+            title='Ingresos por Medio de Marketing',
+            labels={'utm_medium': 'Medio', 'revenue': 'Ingresos (€)'},
+            color='revenue',
+            color_continuous_scale='Viridis'
+        )
+        st.plotly_chart(fig_ingresos, use_container_width=True)
+    
+    with col2:
+        # Gráfico de tasas de conversión
+        fig_conversion = px.bar(
+            medios_df,
+            x='utm_medium',
+            y='conversion_rate',
+            title='Tasa de Conversión por Medio',
+            labels={'utm_medium': 'Medio', 'conversion_rate': 'Tasa (%)'},
+            color='conversion_rate',
+            color_continuous_scale='Blues'
+        )
+        st.plotly_chart(fig_conversion, use_container_width=True)
+    
+    # Top campañas por ROI
+    st.subheader("🏆 Top Campañas por Performance")
+    
+    top_campanas = df.nlargest(10, 'revenue')
+    
+    fig_campanas = px.scatter(
+        top_campanas,
+        x='conversions',
+        y='revenue',
+        size='sessions',
+        color='utm_medium',
+        hover_name='utm_campaign',
+        title='Performance de Campañas: Conversiones vs Ingresos',
+        labels={
+            'conversions': 'Conversiones',
+            'revenue': 'Ingresos (€)',
+            'sessions': 'Sesiones',
+            'utm_medium': 'Medio'
+        },
+        size_max=30
+    )
+    st.plotly_chart(fig_campanas, use_container_width=True)
+    
+    # Análisis de eficiencia
+    st.subheader("📈 Eficiencia de Canales")
+    
+    # Calcular ROI aproximado (ingresos por sesión)
+    df['revenue_per_session'] = (df['revenue'] / df['sessions']).round(2)
+    
+    eficiencia_df = df.nlargest(15, 'revenue_per_session')
+    
+    fig_eficiencia = px.bar(
+        eficiencia_df,
+        x='utm_source',
+        y='revenue_per_session',
+        color='utm_medium',
+        title='Ingresos por Sesión por Fuente (Top 15)',
+        labels={'utm_source': 'Fuente', 'revenue_per_session': 'Ingresos por Sesión (€)'}
+    )
+    fig_eficiencia.update_layout(xaxis_tickangle=-45)
+    st.plotly_chart(fig_eficiencia, use_container_width=True)
