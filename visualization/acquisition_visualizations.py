@@ -316,8 +316,8 @@ def mostrar_atribucion_multimodelo(df):
             }))
 
 def mostrar_atribucion_completa(df):
-    """Visualización para análisis de atribución completa (7 modelos)"""
-    st.subheader("🎯 Atribución Multi-Modelo Completa (7 Modelos)")
+    """Visualización para análisis de atribución completa (6 modelos)"""
+    st.subheader("🎯 Atribución Multi-Modelo Completa (6 Modelos)")
     
     if df.empty:
         st.warning("No hay datos de atribución completa para el rango seleccionado")
@@ -326,12 +326,11 @@ def mostrar_atribucion_completa(df):
     # Información sobre los modelos
     with st.expander("📚 Información sobre los Modelos de Atribución", expanded=False):
         st.markdown("""
-        **7 Modelos Implementados:**
+        **6 Modelos Implementados:**
         
         - **🎯 Last Click**: Atribuye el 100% al último touchpoint antes de la conversión
         - **🚀 First Click**: Atribuye el 100% al primer touchpoint del usuario
         - **📊 Linear**: Distribuye equitativamente entre todos los touchpoints
-        - **⏱️ Time Decay**: Da más peso a los touchpoints más recientes
         - **⚖️ Position Based**: 40% primer click, 40% último click, 20% intermedios
         - **🔍 Last Non-Direct**: Como Last Click pero ignora tráfico directo
         - **🤖 Data Driven**: Combinación algorítmica de múltiples factores
