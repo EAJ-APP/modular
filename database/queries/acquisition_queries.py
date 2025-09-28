@@ -275,3 +275,237 @@ def generar_query_atribucion_marketing(project, dataset, start_date, end_date):
     WHERE attributed_conversions > 0 OR conversions > 0
     ORDER BY attribution_model, attributed_revenue DESC
     """
+def generar_query_atribucion_completa(project, dataset, start_date, end_date):
+    """Consulta COMPLETA para atribución multi-modelo (7 modelos)"""
+    start_date_str = start_date.strftime('%Y%m%d')
+    end_date_str = end_date.strftime('%Y%m%d')
+    
+    return f"""
+    WITH events AS (
+      SELECT
+        TIMESTAMP_MICROS(event_timestamp) AS event_ts,
+        CONCAT(user_pseudo_id,'-',event_name,'-',CAST(event_timestamp AS STRING)) AS event_id,
+        user_pseudo_id,
+        traffic_source.name AS utm_source,
+        traffic_source.medium AS utm_medium,
+        traffic_source.source AS utm_campaign,
+        event_name,
+        (SELECT value.int_value FROM UNNEST(event_params) WHERE KEY = 'ga_session_id') AS session_id,
+        ecommerce.purchase_revenue AS revenue,
+        ecommerce.transaction_id AS transaction_id,
+        device.category AS device_type
+      FROM `{project}.{dataset}.events_*`
+      WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
+        AND event_name IN ('session_start', 'purchase')
+    ),
+    user_sessions AS (
+      SELECT
+        user_pseudo_id,
+        session_id,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        MIN(event_ts) AS session_start_ts,
+        device_type,
+        MAX(CASE WHEN event_name = 'purchase' THEN 1 ELSE 0 END) AS had_conversion,
+        SUM(COALESCE(revenue, 0)) AS total_revenue,
+        COUNT(DISTINCT transaction_id) AS conversions
+      FROM events
+      GROUP BY user_pseudo_id, session_id, utm_source, utm_medium, utm_campaign, device_type
+    ),
+    user_conversions AS (
+      SELECT
+        user_pseudo_id,
+        MIN(CASE WHEN had_conversion = 1 THEN session_start_ts END) AS first_conversion_ts
+      FROM user_sessions
+      GROUP BY user_pseudo_id
+    ),
+    conversion_journeys AS (
+      SELECT
+        us.*,
+        uc.first_conversion_ts,
+        CASE 
+          WHEN us.session_start_ts <= uc.first_conversion_ts THEN 1 
+          ELSE 0 
+        END AS in_conversion_path
+      FROM user_sessions us
+      LEFT JOIN user_conversions uc ON us.user_pseudo_id = uc.user_pseudo_id
+      WHERE uc.first_conversion_ts IS NOT NULL
+    ),
+    -- Calcular métricas para cada modelo
+    last_click AS (
+      SELECT
+        'Last Click' AS attribution_model,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        device_type,
+        COUNT(*) AS touchpoints,
+        SUM(had_conversion) AS conversions,
+        SUM(total_revenue) AS revenue,
+        SUM(CASE 
+          WHEN session_start_ts = MAX(session_start_ts) OVER (PARTITION BY user_pseudo_id) 
+          THEN had_conversion ELSE 0 
+        END) AS attributed_conversions,
+        SUM(CASE 
+          WHEN session_start_ts = MAX(session_start_ts) OVER (PARTITION BY user_pseudo_id) 
+          THEN total_revenue ELSE 0 
+        END) AS attributed_revenue
+      FROM conversion_journeys
+      WHERE in_conversion_path = 1
+      GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    ),
+    first_click AS (
+      SELECT
+        'First Click' AS attribution_model,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        device_type,
+        COUNT(*) AS touchpoints,
+        SUM(had_conversion) AS conversions,
+        SUM(total_revenue) AS revenue,
+        SUM(CASE 
+          WHEN session_start_ts = MIN(session_start_ts) OVER (PARTITION BY user_pseudo_id) 
+          THEN had_conversion ELSE 0 
+        END) AS attributed_conversions,
+        SUM(CASE 
+          WHEN session_start_ts = MIN(session_start_ts) OVER (PARTITION BY user_pseudo_id) 
+          THEN total_revenue ELSE 0 
+        END) AS attributed_revenue
+      FROM conversion_journeys
+      WHERE in_conversion_path = 1
+      GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    ),
+    linear AS (
+      SELECT
+        'Linear' AS attribution_model,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        device_type,
+        COUNT(*) AS touchpoints,
+        SUM(had_conversion) AS conversions,
+        SUM(total_revenue) AS revenue,
+        SUM(had_conversion / NULLIF(COUNT(*) OVER (PARTITION BY user_pseudo_id), 0)) AS attributed_conversions,
+        SUM(total_revenue / NULLIF(COUNT(*) OVER (PARTITION BY user_pseudo_id), 0)) AS attributed_revenue
+      FROM conversion_journeys
+      WHERE in_conversion_path = 1
+      GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    ),
+    -- Modelos simplificados para esta versión
+    time_decay AS (
+      SELECT
+        'Time Decay' AS attribution_model,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        device_type,
+        COUNT(*) AS touchpoints,
+        SUM(had_conversion) AS conversions,
+        SUM(total_revenue) AS revenue,
+        -- Simulación de time decay: más peso a touchpoints recientes
+        SUM(had_conversion * (1.5 / NULLIF(COUNT(*) OVER (PARTITION BY user_pseudo_id), 0))) AS attributed_conversions,
+        SUM(total_revenue * (1.5 / NULLIF(COUNT(*) OVER (PARTITION BY user_pseudo_id), 0))) AS attributed_revenue
+      FROM conversion_journeys
+      WHERE in_conversion_path = 1
+      GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    ),
+    position_based AS (
+      SELECT
+        'Position Based' AS attribution_model,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        device_type,
+        COUNT(*) AS touchpoints,
+        SUM(had_conversion) AS conversions,
+        SUM(total_revenue) AS revenue,
+        -- 40% primer click, 40% último click, 20% distribuido
+        SUM(had_conversion * 0.4 * 
+          CASE 
+            WHEN session_start_ts = MIN(session_start_ts) OVER (PARTITION BY user_pseudo_id) THEN 1
+            WHEN session_start_ts = MAX(session_start_ts) OVER (PARTITION BY user_pseudo_id) THEN 1
+            ELSE 0.2 / NULLIF(COUNT(*) OVER (PARTITION BY user_pseudo_id) - 2, 0)
+          END
+        ) AS attributed_conversions,
+        SUM(total_revenue * 0.4 * 
+          CASE 
+            WHEN session_start_ts = MIN(session_start_ts) OVER (PARTITION BY user_pseudo_id) THEN 1
+            WHEN session_start_ts = MAX(session_start_ts) OVER (PARTITION BY user_pseudo_id) THEN 1
+            ELSE 0.2 / NULLIF(COUNT(*) OVER (PARTITION BY user_pseudo_id) - 2, 0)
+          END
+        ) AS attributed_revenue
+      FROM conversion_journeys
+      WHERE in_conversion_path = 1
+      GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    ),
+    last_non_direct AS (
+      SELECT
+        'Last Non-Direct' AS attribution_model,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        device_type,
+        COUNT(*) AS touchpoints,
+        SUM(had_conversion) AS conversions,
+        SUM(total_revenue) AS revenue,
+        SUM(CASE 
+          WHEN utm_source != '(direct)' AND session_start_ts = MAX(CASE WHEN utm_source != '(direct)' THEN session_start_ts END) OVER (PARTITION BY user_pseudo_id)
+          THEN had_conversion ELSE 0 
+        END) AS attributed_conversions,
+        SUM(CASE 
+          WHEN utm_source != '(direct)' AND session_start_ts = MAX(CASE WHEN utm_source != '(direct)' THEN session_start_ts END) OVER (PARTITION BY user_pseudo_id)
+          THEN total_revenue ELSE 0 
+        END) AS attributed_revenue
+      FROM conversion_journeys
+      WHERE in_conversion_path = 1
+      GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    ),
+    data_driven AS (
+      SELECT
+        'Data Driven' AS attribution_model,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        device_type,
+        COUNT(*) AS touchpoints,
+        SUM(had_conversion) AS conversions,
+        SUM(total_revenue) AS revenue,
+        -- Simulación de modelo data-driven: combinación de linear y time decay
+        SUM(had_conversion * 0.7 / NULLIF(COUNT(*) OVER (PARTITION BY user_pseudo_id), 0) + 
+            had_conversion * 0.3 * (1.5 / NULLIF(COUNT(*) OVER (PARTITION BY user_pseudo_id), 0))) AS attributed_conversions,
+        SUM(total_revenue * 0.7 / NULLIF(COUNT(*) OVER (PARTITION BY user_pseudo_id), 0) + 
+            total_revenue * 0.3 * (1.5 / NULLIF(COUNT(*) OVER (PARTITION BY user_pseudo_id), 0))) AS attributed_revenue
+      FROM conversion_journeys
+      WHERE in_conversion_path = 1
+      GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    ),
+    -- Combinar todos los modelos
+    all_models AS (
+      SELECT * FROM last_click
+      UNION ALL SELECT * FROM first_click
+      UNION ALL SELECT * FROM linear
+      UNION ALL SELECT * FROM time_decay
+      UNION ALL SELECT * FROM position_based
+      UNION ALL SELECT * FROM last_non_direct
+      UNION ALL SELECT * FROM data_driven
+    )
+    SELECT
+      attribution_model,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      device_type,
+      touchpoints,
+      conversions,
+      revenue,
+      ROUND(attributed_conversions, 2) AS attributed_conversions,
+      ROUND(attributed_revenue, 2) AS attributed_revenue,
+      ROUND(CASE WHEN touchpoints > 0 THEN attributed_conversions / touchpoints * 100 ELSE 0 END, 2) AS conversion_rate,
+      ROUND(CASE WHEN attributed_conversions > 0 THEN attributed_revenue / attributed_conversions ELSE 0 END, 2) AS revenue_per_conversion
+    FROM all_models
+    WHERE attributed_conversions > 0 OR conversions > 0
+    ORDER BY attribution_model, attributed_revenue DESC
+    LIMIT 1000
+    """
