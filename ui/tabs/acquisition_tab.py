@@ -56,6 +56,7 @@ def show_acquisition_tab(client, project, dataset, start_date, end_date):
         
         if st.button("Análisis 7 Modelos", key="btn_7modelos"):
             with st.spinner("Calculando atribución completa (puede tardar)..."):
+                # CORRECCIÓN: Usar la consulta correcta para 7 modelos
                 query = generar_query_atribucion_completa(project, dataset, start_date, end_date)
                 df = run_query(client, query)
                 mostrar_atribucion_completa(df)
