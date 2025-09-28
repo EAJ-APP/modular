@@ -12,7 +12,10 @@ from .ecommerce_visualizations import (
     mostrar_funnel_por_producto
 )
 
-from .acquisition_visualizations import mostrar_canales_trafico
+from .acquisition_visualizations import (
+    mostrar_canales_trafico,
+    mostrar_atribucion_marketing  # NUEVO
+)
 
 from .common_charts import (
     create_pie_chart,
@@ -32,5 +35,6 @@ __all__ = [
     'create_pie_chart',
     'create_bar_chart',
     'create_funnel_chart',
-    'mostrar_canales_trafico'
+    'mostrar_canales_trafico',
+    'mostrar_atribucion_marketing'
 ]
