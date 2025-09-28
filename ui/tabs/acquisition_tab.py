@@ -11,9 +11,31 @@ from visualization.acquisition_visualizations import (
     mostrar_atribucion_completa
 )
 from database.connection import run_query
+# Añade esta importación para el debug
+from database.queries.debug_queries import debug_query_modelos
 
 def show_acquisition_tab(client, project, dataset, start_date, end_date):
     """Pestaña de Adquisición con análisis de tráfico"""
+    
+    # SECCIÓN DEBUG - Para diagnosticar problemas
+    with st.expander("🔧 DEBUG - Diagnóstico de Consultas", expanded=False):
+        st.warning("Esta sección es solo para debugging - eliminar en producción")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Probar Conexión Básica", key="debug_basic"):
+                with st.spinner("Probando conexión..."):
+                    query = debug_query_modelos(project, dataset, start_date, end_date)
+                    df = run_query(client, query)
+                    st.success("✅ Conexión exitosa")
+                    st.dataframe(df)
+        
+        with col2:
+            if st.button("Ver Consulta 7 Modelos", key="debug_sql"):
+                query = generar_query_atribucion_completa(project, dataset, start_date, end_date)
+                st.code(query, language="sql")
+    
+    # ... el resto de tu código actual ...
     
     # Sección 1: Canales de Tráfico
     with st.expander("🌐 Análisis de Canales de Tráfico", expanded=False):
