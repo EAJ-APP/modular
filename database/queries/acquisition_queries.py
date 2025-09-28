@@ -108,13 +108,12 @@ def generar_query_canales_trafico(project, dataset, start_date, end_date):
       s.session_count DESC
     """
 def generar_query_atribucion_marketing(project, dataset, start_date, end_date):
-    """Consulta para atribución de marketing multi-modelo"""
+    """Consulta INTERMEDIA para atribución multi-modelo (3 modelos)"""
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
     return f"""
-    -- Versión simplificada para integración inicial
-    WITH base_data AS (
+    WITH session_data AS (
       SELECT
         CONCAT(user_pseudo_id, '-', 
           (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id')
@@ -123,37 +122,156 @@ def generar_query_atribucion_marketing(project, dataset, start_date, end_date):
         traffic_source.source AS utm_source,
         traffic_source.medium AS utm_medium,
         traffic_source.name AS utm_campaign,
-        event_name,
-        TIMESTAMP_MICROS(event_timestamp) AS event_ts,
-        (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location') AS page_path,
+        TIMESTAMP_MICROS(event_timestamp) AS session_start_ts,
+        (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location') AS landing_page,
+        device.category AS device_type
+      FROM `{project}.{dataset}.events_*`
+      WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{start_date_str}'
+        AND event_name = 'session_start'
+    ),
+    conversion_data AS (
+      SELECT
+        CONCAT(user_pseudo_id, '-', 
+          (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id')
+        ) AS session_id,
         ecommerce.purchase_revenue AS revenue,
         ecommerce.transaction_id AS transaction_id
       FROM `{project}.{dataset}.events_*`
-      WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
-        AND event_name IN ('session_start', 'purchase')
+      WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{start_date_str}'
+        AND event_name = 'purchase'
+        AND ecommerce.purchase_revenue > 0
     ),
-    sessions_with_conversions AS (
+    user_journeys AS (
       SELECT
-        session_id,
+        s.user_pseudo_id,
+        s.session_id,
+        s.utm_source,
+        s.utm_medium,
+        s.utm_campaign,
+        s.session_start_ts,
+        s.landing_page,
+        s.device_type,
+        COALESCE(c.revenue, 0) AS revenue,
+        CASE WHEN c.transaction_id IS NOT NULL THEN 1 ELSE 0 END AS conversion
+      FROM session_data s
+      LEFT JOIN conversion_data c ON s.session_id = c.session_id
+    ),
+    user_conversion_cycles AS (
+      SELECT
+        user_pseudo_id,
+        MIN(CASE WHEN conversion = 1 THEN session_start_ts END) AS first_conversion_ts
+      FROM user_journeys
+      GROUP BY user_pseudo_id
+    ),
+    -- Modelo Last Click
+    last_click_attribution AS (
+      SELECT
+        'Last Click' AS attribution_model,
         utm_source,
-        utm_medium, 
+        utm_medium,
         utm_campaign,
-        MAX(CASE WHEN event_name = 'purchase' THEN 1 ELSE 0 END) AS had_conversion,
-        SUM(COALESCE(revenue, 0)) AS total_revenue,
-        COUNT(DISTINCT transaction_id) AS conversions
-      FROM base_data
-      GROUP BY session_id, utm_source, utm_medium, utm_campaign
+        COUNT(*) AS sessions,
+        SUM(conversion) AS conversions,
+        SUM(revenue) AS revenue,
+        CASE 
+          WHEN SUM(conversion) > 0 THEN 1
+          ELSE 0
+        END AS attributed_conversions,
+        CASE 
+          WHEN SUM(conversion) > 0 THEN SUM(revenue)
+          ELSE 0
+        END AS attributed_revenue
+      FROM (
+        SELECT
+          uj.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY uj.user_pseudo_id 
+            ORDER BY uj.session_start_ts DESC
+          ) as session_rank
+        FROM user_journeys uj
+        JOIN user_conversion_cycles ucc ON uj.user_pseudo_id = ucc.user_pseudo_id
+        WHERE uj.session_start_ts <= ucc.first_conversion_ts
+      ) ranked
+      WHERE session_rank = 1 OR conversion = 1
+      GROUP BY utm_source, utm_medium, utm_campaign
+    ),
+    -- Modelo First Click
+    first_click_attribution AS (
+      SELECT
+        'First Click' AS attribution_model,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        COUNT(*) AS sessions,
+        SUM(conversion) AS conversions,
+        SUM(revenue) AS revenue,
+        CASE 
+          WHEN SUM(conversion) > 0 THEN 1
+          ELSE 0
+        END AS attributed_conversions,
+        CASE 
+          WHEN SUM(conversion) > 0 THEN SUM(revenue)
+          ELSE 0
+        END AS attributed_revenue
+      FROM (
+        SELECT
+          uj.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY uj.user_pseudo_id 
+            ORDER BY uj.session_start_ts ASC
+          ) as session_rank
+        FROM user_journeys uj
+        JOIN user_conversion_cycles ucc ON uj.user_pseudo_id = ucc.user_pseudo_id
+        WHERE uj.session_start_ts <= ucc.first_conversion_ts
+      ) ranked
+      WHERE session_rank = 1
+      GROUP BY utm_source, utm_medium, utm_campaign
+    ),
+    -- Modelo Linear
+    linear_attribution AS (
+      SELECT
+        'Linear' AS attribution_model,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        COUNT(*) AS sessions,
+        SUM(conversion) AS conversions,
+        SUM(revenue) AS revenue,
+        SUM(1.0 / NULLIF(touchpoints.total_touchpoints, 0)) AS attributed_conversions,
+        SUM(revenue / NULLIF(touchpoints.total_touchpoints, 0)) AS attributed_revenue
+      FROM user_journeys uj
+      JOIN (
+        SELECT
+          user_pseudo_id,
+          COUNT(*) AS total_touchpoints
+        FROM user_journeys
+        JOIN user_conversion_cycles USING (user_pseudo_id)
+        WHERE session_start_ts <= first_conversion_ts
+        GROUP BY user_pseudo_id
+      ) touchpoints ON uj.user_pseudo_id = touchpoints.user_pseudo_id
+      WHERE uj.session_start_ts <= (SELECT first_conversion_ts FROM user_conversion_cycles WHERE user_pseudo_id = uj.user_pseudo_id)
+      GROUP BY utm_source, utm_medium, utm_campaign
+    ),
+    -- Unir todos los modelos
+    combined_models AS (
+      SELECT * FROM last_click_attribution
+      UNION ALL
+      SELECT * FROM first_click_attribution
+      UNION ALL
+      SELECT * FROM linear_attribution
     )
     SELECT
+      attribution_model,
       utm_source,
       utm_medium,
       utm_campaign,
-      COUNT(*) AS sessions,
-      SUM(had_conversion) AS conversions,
-      SUM(total_revenue) AS revenue,
-      ROUND(SUM(had_conversion) / COUNT(*) * 100, 2) AS conversion_rate
-    FROM sessions_with_conversions
-    GROUP BY utm_source, utm_medium, utm_campaign
-    ORDER BY revenue DESC
-    LIMIT 50
+      sessions,
+      conversions,
+      revenue,
+      ROUND(attributed_conversions, 2) AS attributed_conversions,
+      ROUND(attributed_revenue, 2) AS attributed_revenue,
+      ROUND(CASE WHEN sessions > 0 THEN attributed_conversions / sessions * 100 ELSE 0 END, 2) AS attribution_rate
+    FROM combined_models
+    WHERE attributed_conversions > 0 OR conversions > 0
+    ORDER BY attribution_model, attributed_revenue DESC
     """
