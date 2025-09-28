@@ -12,6 +12,9 @@ from .ecommerce_queries import (
     generar_query_funnel_por_producto
 )
 
+# Añadir estas líneas al final del archivo:
+from .acquisition_queries import generar_query_canales_trafico
+
 __all__ = [
     'generar_query_consentimiento_basico',
     'generar_query_consentimiento_por_dispositivo',
@@ -20,5 +23,6 @@ __all__ = [
     'generar_query_ingresos_transacciones',
     'generar_query_productos_mas_vendidos',
     'generar_query_relacion_productos',
-    'generar_query_funnel_por_producto'
+    'generar_query_funnel_por_producto',
+    'generar_query_canales_trafico'
 ]
