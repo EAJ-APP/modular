@@ -14,7 +14,8 @@ from .ecommerce_queries import (
 
 from .acquisition_queries import (
     generar_query_canales_trafico,
-    generar_query_atribucion_marketing  # NUEVO
+    generar_query_atribucion_marketing,
+    generar_query_atribucion_completa  # NUEVO
 )
 
 __all__ = [
@@ -27,5 +28,6 @@ __all__ = [
     'generar_query_relacion_productos',
     'generar_query_funnel_por_producto',
     'generar_query_canales_trafico',
-    'generar_query_atribucion_marketing'
+    'generar_query_atribucion_marketing',
+    'generar_query_atribucion_completa' 
 ]
