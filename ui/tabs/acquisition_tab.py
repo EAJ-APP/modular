@@ -18,30 +18,22 @@ def show_acquisition_tab(client, project, dataset, start_date, end_date):
     """Pestaña de Adquisición con análisis de tráfico"""
     
     # SECCIÓN DEBUG - Para diagnosticar problemas
-# En la sección DEBUG, añade esto:
-with st.expander("🔧 DEBUG - Diagnóstico de Consultas", expanded=False):
-    st.warning("Esta sección es solo para debugging - eliminar en producción")
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("Probar Conexión Básica", key="debug_basic"):
-            with st.spinner("Probando conexión..."):
-                query = debug_query_modelos(project, dataset, start_date, end_date)
-                df = run_query(client, query)
-                st.success("✅ Conexión exitosa")
-                st.dataframe(df)
-    
-    with col2:
-        if st.button("Debug 7 Modelos", key="debug_7"):
-            with st.spinner("Verificando modelos..."):
-                query = debug_query_7_modelos(project, dataset, start_date, end_date)
-                df = run_query(client, query)
-                st.dataframe(df)
-    
-    with col3:
-        if st.button("Ver Consulta 7 Modelos", key="debug_sql"):
-            query = generar_query_atribucion_completa(project, dataset, start_date, end_date)
-            st.code(query, language="sql")
+    with st.expander("🔧 DEBUG - Diagnóstico de Consultas", expanded=False):
+        st.warning("Esta sección es solo para debugging - eliminar en producción")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Probar Conexión Básica", key="debug_basic"):
+                with st.spinner("Probando conexión..."):
+                    query = debug_query_modelos(project, dataset, start_date, end_date)
+                    df = run_query(client, query)
+                    st.success("✅ Conexión exitosa")
+                    st.dataframe(df)
+        
+        with col2:
+            if st.button("Ver Consulta 7 Modelos", key="debug_sql"):
+                query = generar_query_atribucion_completa(project, dataset, start_date, end_date)
+                st.code(query, language="sql")
     
     # ... el resto de tu código actual ...
     
