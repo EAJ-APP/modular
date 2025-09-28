@@ -31,19 +31,29 @@ def show_acquisition_tab(client, project, dataset, start_date, end_date):
                 df = run_query(client, query)
                 mostrar_canales_trafico(df)
     
-    # NUEVA SECCIÓN: Atribución de Marketing
-    with st.expander("🎯 Atribución de Marketing", expanded=True):
-        st.info("""
-        **Análisis de atribución por parámetros UTM:**
-        - 📊 **Sesiones y conversiones** por fuente/medio/campaña
-        - 💰 **Ingresos atribuidos** a cada canal
-        - 📈 **Tasas de conversión** comparativas
-        - 🏆 **Performance** de campañas específicas
-        - 📉 **Eficiencia** por sesión y conversión
-        """)
-        
-        if st.button("Analizar Atribución UTM", key="btn_atribucion"):
-            with st.spinner("Calculando atribución de marketing..."):
+    # En la sección de atribución, actualizar el botón y la llamada:
+with st.expander("🎯 Atribución de Marketing", expanded=True):
+    st.info("""
+    **Análisis de atribución multi-modelo:**
+    - 🎯 **3 Modelos de Atribución:** Last Click, First Click, Linear
+    - 📊 **Comparativa** entre diferentes modelos
+    - 💰 **Ingresos atribuidos** por modelo y canal
+    - 🔄 **Diferencias** entre modelos de atribución
+    - 📈 **Eficiencia** por sesión y conversión
+    """)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("Análisis Básico UTM", key="btn_atribucion_basica"):
+            with st.spinner("Calculando atribución básica..."):
                 query = generar_query_atribucion_marketing(project, dataset, start_date, end_date)
                 df = run_query(client, query)
                 mostrar_atribucion_marketing(df)
+    
+    with col2:
+        if st.button("Análisis Multi-Modelo", key="btn_atribucion_multimodelo"):
+            with st.spinner("Calculando atribución multi-modelo..."):
+                query = generar_query_atribucion_marketing(project, dataset, start_date, end_date)
+                df = run_query(client, query)
+                mostrar_atribucion_multimodelo(df)
