@@ -107,3 +107,53 @@ def generar_query_canales_trafico(project, dataset, start_date, end_date):
     ORDER BY
       s.session_count DESC
     """
+def generar_query_atribucion_marketing(project, dataset, start_date, end_date):
+    """Consulta para atribución de marketing multi-modelo"""
+    start_date_str = start_date.strftime('%Y%m%d')
+    end_date_str = end_date.strftime('%Y%m%d')
+    
+    return f"""
+    -- Versión simplificada para integración inicial
+    WITH base_data AS (
+      SELECT
+        CONCAT(user_pseudo_id, '-', 
+          (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id')
+        ) AS session_id,
+        user_pseudo_id,
+        traffic_source.source AS utm_source,
+        traffic_source.medium AS utm_medium,
+        traffic_source.name AS utm_campaign,
+        event_name,
+        TIMESTAMP_MICROS(event_timestamp) AS event_ts,
+        (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location') AS page_path,
+        ecommerce.purchase_revenue AS revenue,
+        ecommerce.transaction_id AS transaction_id
+      FROM `{project}.{dataset}.events_*`
+      WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
+        AND event_name IN ('session_start', 'purchase')
+    ),
+    sessions_with_conversions AS (
+      SELECT
+        session_id,
+        utm_source,
+        utm_medium, 
+        utm_campaign,
+        MAX(CASE WHEN event_name = 'purchase' THEN 1 ELSE 0 END) AS had_conversion,
+        SUM(COALESCE(revenue, 0)) AS total_revenue,
+        COUNT(DISTINCT transaction_id) AS conversions
+      FROM base_data
+      GROUP BY session_id, utm_source, utm_medium, utm_campaign
+    )
+    SELECT
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      COUNT(*) AS sessions,
+      SUM(had_conversion) AS conversions,
+      SUM(total_revenue) AS revenue,
+      ROUND(SUM(had_conversion) / COUNT(*) * 100, 2) AS conversion_rate
+    FROM sessions_with_conversions
+    GROUP BY utm_source, utm_medium, utm_campaign
+    ORDER BY revenue DESC
+    LIMIT 50
+    """
