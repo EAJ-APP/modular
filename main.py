@@ -9,7 +9,7 @@ try:
     from config.settings import Settings
     from utils import setup_environment, check_dependencies
     from database.connection import get_bq_client
-    from ui import render_sidebar, get_project_dataset_selection, show_cookies_tab, show_ecommerce_tab
+    from ui import render_sidebar, get_project_dataset_selection, show_cookies_tab, show_ecommerce_tab, show_acquisition_tab
     
     st.sidebar.success("✅ Módulos importados correctamente")
     
@@ -58,18 +58,17 @@ def main():
     tab_ids = ["cookies", "ecommerce", "acquisition", "events", "users", "sessions"]
     
     tabs = st.tabs(tab_titles)
-    
-for tab, tab_id in zip(tabs, tab_ids):
-    with tab:
-        st.header(f"Análisis de {tab_id.capitalize()}")
-        if tab_id == "cookies":
-            show_cookies_tab(client, selected_project, selected_dataset, start_date, end_date)
-        elif tab_id == "ecommerce":
-            show_ecommerce_tab(client, selected_project, selected_dataset, start_date, end_date)
-        elif tab_id == "acquisition":  # NUEVO
-            show_acquisition_tab(client, selected_project, selected_dataset, start_date, end_date)
-        else:
-            st.info(f"🔧 Sección en desarrollo. Próximamente: consultas para {tab_id}")
+    for tab, tab_id in zip(tabs, tab_ids):
+        with tab:
+            st.header(f"Análisis de {tab_id.capitalize()}")
+            if tab_id == "cookies":
+                show_cookies_tab(client, selected_project, selected_dataset, start_date, end_date)
+            elif tab_id == "ecommerce":
+                show_ecommerce_tab(client, selected_project, selected_dataset, start_date, end_date)
+            elif tab_id == "acquisition":  # NUEVO
+                show_acquisition_tab(client, selected_project, selected_dataset, start_date, end_date)
+            else:
+                st.info(f"🔧 Sección en desarrollo. Próximamente: consultas para {tab_id}")
 
-if __name__ == "__main__":
-    main()
+    if __name__ == "__main__":
+        main()
