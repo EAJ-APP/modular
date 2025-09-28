@@ -446,3 +446,36 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
     ORDER BY attribution_model, attributed_revenue DESC
     LIMIT 1000
     """
+# Añade esta función a acquisition_queries.py
+def debug_query_7_modelos(project, dataset, start_date, end_date):
+    """Consulta de DEBUG para ver los 7 modelos uno por uno"""
+    start_date_str = start_date.strftime('%Y%m%d')
+    end_date_str = end_date.strftime('%Y%m%d')
+    
+    return f"""
+    -- Consulta de DEBUG - Modelos individuales
+    WITH base_data AS (
+      SELECT
+        user_pseudo_id,
+        CONCAT(user_pseudo_id, '-', 
+          (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id')
+        ) AS session_id,
+        traffic_source.source AS utm_source,
+        traffic_source.medium AS utm_medium,
+        traffic_source.name AS utm_campaign,
+        TIMESTAMP_MICROS(event_timestamp) AS session_start_ts,
+        device.category AS device_type,
+        ecommerce.purchase_revenue AS revenue,
+        CASE WHEN event_name = 'purchase' AND ecommerce.purchase_revenue > 0 THEN 1 ELSE 0 END AS conversion
+      FROM `{project}.{dataset}.events_*`
+      WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
+        AND event_name IN ('session_start', 'purchase')
+    )
+    
+    -- Solo contar cuántos modelos deberíamos tener
+    SELECT 'DEBUG - Total modelos posibles' as info, 7 as expected_models
+    UNION ALL
+    SELECT 'DEBUG - Filas en base_data' as info, COUNT(*) as expected_models FROM base_data
+    UNION ALL
+    SELECT 'DEBUG - Conversiones' as info, SUM(conversion) as expected_models FROM base_data
+    """
