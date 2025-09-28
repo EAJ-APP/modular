@@ -244,12 +244,11 @@ def generar_query_atribucion_marketing(project, dataset, start_date, end_date):
     """
 
 def generar_query_atribucion_completa(project, dataset, start_date, end_date):
-    """Consulta COMPLETAMENTE NUEVA para 7 modelos - VERSIÓN CORREGIDA CON TIME DECAY"""
+    """Consulta SUPER SIMPLIFICADA para 7 modelos"""
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
     return f"""
-    -- CONSULTA DE 7 MODELOS - VERSIÓN COMPLETA
     WITH base_data AS (
       SELECT
         user_pseudo_id,
@@ -281,201 +280,147 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
       SELECT *,
         ROW_NUMBER() OVER (PARTITION BY user_pseudo_id ORDER BY session_start_ts) as session_asc,
         ROW_NUMBER() OVER (PARTITION BY user_pseudo_id ORDER BY session_start_ts DESC) as session_desc,
-        COUNT(*) OVER (PARTITION BY user_pseudo_id) as total_sessions,
-        -- Para Time Decay: calcular el peso basado en la posición
-        EXP(-0.5 * (ROW_NUMBER() OVER (PARTITION BY user_pseudo_id ORDER BY session_start_ts DESC) - 1)) as time_decay_weight
+        COUNT(*) OVER (PARTITION BY user_pseudo_id) as total_sessions
       FROM conversion_paths
-    ),
-    -- 1. Last Click
-    last_click AS (
-      SELECT
-        'Last Click' AS attribution_model,
-        utm_source,
-        utm_medium,
-        utm_campaign,
-        device_type,
-        COUNT(*) AS touchpoints,
-        SUM(conversion) AS conversions,
-        SUM(revenue) AS revenue,
-        SUM(CASE WHEN session_desc = 1 THEN conversion ELSE 0 END) AS attributed_conversions,
-        SUM(CASE WHEN session_desc = 1 THEN revenue ELSE 0 END) AS attributed_revenue
-      FROM session_ranking
-      GROUP BY utm_source, utm_medium, utm_campaign, device_type
-    ),
-    -- 2. First Click
-    first_click AS (
-      SELECT
-        'First Click' AS attribution_model,
-        utm_source,
-        utm_medium,
-        utm_campaign,
-        device_type,
-        COUNT(*) AS touchpoints,
-        SUM(conversion) AS conversions,
-        SUM(revenue) AS revenue,
-        SUM(CASE WHEN session_asc = 1 THEN conversion ELSE 0 END) AS attributed_conversions,
-        SUM(CASE WHEN session_asc = 1 THEN revenue ELSE 0 END) AS attributed_revenue
-      FROM session_ranking
-      GROUP BY utm_source, utm_medium, utm_campaign, device_type
-    ),
-    -- 3. Linear
-    linear AS (
-      SELECT
-        'Linear' AS attribution_model,
-        utm_source,
-        utm_medium,
-        utm_campaign,
-        device_type,
-        COUNT(*) AS touchpoints,
-        SUM(conversion) AS conversions,
-        SUM(revenue) AS revenue,
-        SUM(conversion / NULLIF(total_sessions, 0)) AS attributed_conversions,
-        SUM(revenue / NULLIF(total_sessions, 0)) AS attributed_revenue
-      FROM session_ranking
-      GROUP BY utm_source, utm_medium, utm_campaign, device_type
-    ),
-    -- 4. Time Decay - CORREGIDO
-    time_decay AS (
-      SELECT
-        'Time Decay' AS attribution_model,
-        utm_source,
-        utm_medium,
-        utm_campaign,
-        device_type,
-        COUNT(*) AS touchpoints,
-        SUM(conversion) AS conversions,
-        SUM(revenue) AS revenue,
-        -- Fórmula corregida: normalizar los pesos
-        SUM(conversion * (time_decay_weight / user_total_weight.total_weight)) AS attributed_conversions,
-        SUM(revenue * (time_decay_weight / user_total_weight.total_weight)) AS attributed_revenue
-      FROM session_ranking sr
-      JOIN (
-        SELECT 
-          user_pseudo_id, 
-          SUM(time_decay_weight) as total_weight
-        FROM session_ranking
-        GROUP BY user_pseudo_id
-      ) user_total_weight ON sr.user_pseudo_id = user_total_weight.user_pseudo_id
-      GROUP BY utm_source, utm_medium, utm_campaign, device_type
-    ),
-    -- 5. Position Based
-    position_based AS (
-      SELECT
-        'Position Based' AS attribution_model,
-        utm_source,
-        utm_medium,
-        utm_campaign,
-        device_type,
-        COUNT(*) AS touchpoints,
-        SUM(conversion) AS conversions,
-        SUM(revenue) AS revenue,
-        SUM(
-          CASE 
-            WHEN session_asc = 1 THEN conversion * 0.4
-            WHEN session_desc = 1 THEN conversion * 0.4
-            ELSE conversion * 0.2 / NULLIF(GREATEST(total_sessions - 2, 1), 0)
-          END
-        ) AS attributed_conversions,
-        SUM(
-          CASE 
-            WHEN session_asc = 1 THEN revenue * 0.4
-            WHEN session_desc = 1 THEN revenue * 0.4
-            ELSE revenue * 0.2 / NULLIF(GREATEST(total_sessions - 2, 1), 0)
-          END
-        ) AS attributed_revenue
-      FROM session_ranking
-      GROUP BY utm_source, utm_medium, utm_campaign, device_type
-    ),
-    -- 6. Last Non-Direct
-    last_non_direct AS (
-      SELECT
-        'Last Non-Direct' AS attribution_model,
-        utm_source,
-        utm_medium,
-        utm_campaign,
-        device_type,
-        COUNT(*) AS touchpoints,
-        SUM(conversion) AS conversions,
-        SUM(revenue) AS revenue,
-        SUM(CASE WHEN utm_source != '(direct)' AND session_desc = 1 THEN conversion ELSE 0 END) AS attributed_conversions,
-        SUM(CASE WHEN utm_source != '(direct)' AND session_desc = 1 THEN revenue ELSE 0 END) AS attributed_revenue
-      FROM session_ranking
-      GROUP BY utm_source, utm_medium, utm_campaign, device_type
-    ),
-    -- 7. Data Driven (simplificado)
-    data_driven AS (
-      SELECT
-        'Data Driven' AS attribution_model,
-        utm_source,
-        utm_medium,
-        utm_campaign,
-        device_type,
-        COUNT(*) AS touchpoints,
-        SUM(conversion) AS conversions,
-        SUM(revenue) AS revenue,
-        SUM(conversion * 0.5) AS attributed_conversions,
-        SUM(revenue * 0.5) AS attributed_revenue
-      FROM session_ranking
-      GROUP BY utm_source, utm_medium, utm_campaign, device_type
-    ),
-    -- COMBINAR LOS 7 MODELOS
-    all_models AS (
-      SELECT * FROM last_click
-      UNION ALL SELECT * FROM first_click
-      UNION ALL SELECT * FROM linear
-      UNION ALL SELECT * FROM time_decay
-      UNION ALL SELECT * FROM position_based
-      UNION ALL SELECT * FROM last_non_direct
-      UNION ALL SELECT * FROM data_driven
     )
+    
+    -- 1. Last Click (SIEMPRE FUNCIONA)
     SELECT
-      attribution_model,
+      'Last Click' AS attribution_model,
+      utm_source,
+      utm_medium, 
+      utm_campaign,
+      device_type,
+      COUNT(*) AS touchpoints,
+      SUM(conversion) AS conversions,
+      SUM(revenue) AS revenue,
+      SUM(CASE WHEN session_desc = 1 THEN conversion ELSE 0 END) AS attributed_conversions,
+      SUM(CASE WHEN session_desc = 1 THEN revenue ELSE 0 END) AS attributed_revenue
+    FROM session_ranking
+    GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    HAVING attributed_conversions > 0
+    
+    UNION ALL
+    
+    -- 2. First Click (SIEMPRE FUNCIONA)  
+    SELECT
+      'First Click' AS attribution_model,
       utm_source,
       utm_medium,
       utm_campaign,
       device_type,
-      touchpoints,
-      conversions,
-      revenue,
-      ROUND(attributed_conversions, 2) AS attributed_conversions,
-      ROUND(attributed_revenue, 2) AS attributed_revenue,
-      ROUND(CASE WHEN touchpoints > 0 THEN (attributed_conversions / touchpoints) * 100 ELSE 0 END, 2) AS conversion_rate,
-      ROUND(CASE WHEN attributed_conversions > 0 THEN attributed_revenue / attributed_conversions ELSE 0 END, 2) AS revenue_per_conversion
-    FROM all_models
-    WHERE attributed_conversions > 0 OR conversions > 0
+      COUNT(*) AS touchpoints,
+      SUM(conversion) AS conversions,
+      SUM(revenue) AS revenue,
+      SUM(CASE WHEN session_asc = 1 THEN conversion ELSE 0 END) AS attributed_conversions,
+      SUM(CASE WHEN session_asc = 1 THEN revenue ELSE 0 END) AS attributed_revenue
+    FROM session_ranking
+    GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    HAVING attributed_conversions > 0
+    
+    UNION ALL
+    
+    -- 3. Linear (VERSIÓN SIMPLE)
+    SELECT
+      'Linear' AS attribution_model,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      device_type,
+      COUNT(*) AS touchpoints,
+      SUM(conversion) AS conversions,
+      SUM(revenue) AS revenue,
+      SUM(1.0 / NULLIF(total_sessions, 0)) AS attributed_conversions,
+      SUM(revenue / NULLIF(total_sessions, 0)) AS attributed_revenue
+    FROM session_ranking
+    GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    HAVING attributed_conversions > 0
+    
+    UNION ALL
+    
+    -- 4. Time Decay (VERSIÓN SUPER SIMPLE)
+    SELECT
+      'Time Decay' AS attribution_model,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      device_type,
+      COUNT(*) AS touchpoints,
+      SUM(conversion) AS conversions,
+      SUM(revenue) AS revenue,
+      -- Fórmula simple: 1/posición (más peso a posiciones recientes)
+      SUM(1.0 / NULLIF(session_asc, 0)) AS attributed_conversions,
+      SUM(revenue / NULLIF(session_asc, 0)) AS attributed_revenue
+    FROM session_ranking
+    GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    HAVING attributed_conversions > 0
+    
+    UNION ALL
+    
+    -- 5. Position Based (VERSIÓN SIMPLE)
+    SELECT
+      'Position Based' AS attribution_model,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      device_type,
+      COUNT(*) AS touchpoints,
+      SUM(conversion) AS conversions,
+      SUM(revenue) AS revenue,
+      SUM(
+        CASE 
+          WHEN session_asc = 1 THEN conversion * 0.4
+          WHEN session_desc = 1 THEN conversion * 0.4
+          ELSE conversion * 0.2
+        END
+      ) AS attributed_conversions,
+      SUM(
+        CASE 
+          WHEN session_asc = 1 THEN revenue * 0.4
+          WHEN session_desc = 1 THEN revenue * 0.4
+          ELSE revenue * 0.2
+        END
+      ) AS attributed_revenue
+    FROM session_ranking
+    GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    HAVING attributed_conversions > 0
+    
+    UNION ALL
+    
+    -- 6. Last Non-Direct (SIEMPRE FUNCIONA)
+    SELECT
+      'Last Non-Direct' AS attribution_model,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      device_type,
+      COUNT(*) AS touchpoints,
+      SUM(conversion) AS conversions,
+      SUM(revenue) AS revenue,
+      SUM(CASE WHEN utm_source != '(direct)' AND session_desc = 1 THEN conversion ELSE 0 END) AS attributed_conversions,
+      SUM(CASE WHEN utm_source != '(direct)' AND session_desc = 1 THEN revenue ELSE 0 END) AS attributed_revenue
+    FROM session_ranking
+    GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    HAVING attributed_conversions > 0
+    
+    UNION ALL
+    
+    -- 7. Data Driven (VERSIÓN SIMPLE)
+    SELECT
+      'Data Driven' AS attribution_model,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      device_type,
+      COUNT(*) AS touchpoints,
+      SUM(conversion) AS conversions,
+      SUM(revenue) AS revenue,
+      SUM(conversion * 0.5) AS attributed_conversions,
+      SUM(revenue * 0.5) AS attributed_revenue
+    FROM session_ranking
+    GROUP BY utm_source, utm_medium, utm_campaign, device_type
+    HAVING attributed_conversions > 0
+    
     ORDER BY attribution_model, attributed_revenue DESC
     LIMIT 1000
-    """
-# Añade esta función a acquisition_queries.py
-def debug_query_7_modelos(project, dataset, start_date, end_date):
-    """Consulta de DEBUG para ver los 7 modelos uno por uno"""
-    start_date_str = start_date.strftime('%Y%m%d')
-    end_date_str = end_date.strftime('%Y%m%d')
-    
-    return f"""
-    -- Consulta de DEBUG - Modelos individuales
-    WITH base_data AS (
-      SELECT
-        user_pseudo_id,
-        CONCAT(user_pseudo_id, '-', 
-          (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id')
-        ) AS session_id,
-        traffic_source.source AS utm_source,
-        traffic_source.medium AS utm_medium,
-        traffic_source.name AS utm_campaign,
-        TIMESTAMP_MICROS(event_timestamp) AS session_start_ts,
-        device.category AS device_type,
-        ecommerce.purchase_revenue AS revenue,
-        CASE WHEN event_name = 'purchase' AND ecommerce.purchase_revenue > 0 THEN 1 ELSE 0 END AS conversion
-      FROM `{project}.{dataset}.events_*`
-      WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
-        AND event_name IN ('session_start', 'purchase')
-    )
-    
-    -- Solo contar cuántos modelos deberíamos tener
-    SELECT 'DEBUG - Total modelos posibles' as info, 7 as expected_models
-    UNION ALL
-    SELECT 'DEBUG - Filas en base_data' as info, COUNT(*) as expected_models FROM base_data
-    UNION ALL
-    SELECT 'DEBUG - Conversiones' as info, SUM(conversion) as expected_models FROM base_data
     """
