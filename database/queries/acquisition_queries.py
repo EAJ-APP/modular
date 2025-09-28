@@ -244,12 +244,12 @@ def generar_query_atribucion_marketing(project, dataset, start_date, end_date):
     """
 
 def generar_query_atribucion_completa(project, dataset, start_date, end_date):
-    """Consulta COMPLETAMENTE NUEVA para 7 modelos - VERSIÓN SIMPLIFICADA"""
+    """Consulta COMPLETAMENTE NUEVA para 7 modelos - VERSIÓN CORREGIDA CON TIME DECAY"""
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
     return f"""
-    -- CONSULTA DE 7 MODELOS - VERSIÓN SIMPLIFICADA Y FUNCIONAL
+    -- CONSULTA DE 7 MODELOS - VERSIÓN COMPLETA
     WITH base_data AS (
       SELECT
         user_pseudo_id,
@@ -281,7 +281,9 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
       SELECT *,
         ROW_NUMBER() OVER (PARTITION BY user_pseudo_id ORDER BY session_start_ts) as session_asc,
         ROW_NUMBER() OVER (PARTITION BY user_pseudo_id ORDER BY session_start_ts DESC) as session_desc,
-        COUNT(*) OVER (PARTITION BY user_pseudo_id) as total_sessions
+        COUNT(*) OVER (PARTITION BY user_pseudo_id) as total_sessions,
+        -- Para Time Decay: calcular el peso basado en la posición
+        EXP(-0.5 * (ROW_NUMBER() OVER (PARTITION BY user_pseudo_id ORDER BY session_start_ts DESC) - 1)) as time_decay_weight
       FROM conversion_paths
     ),
     -- 1. Last Click
@@ -332,7 +334,7 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
       FROM session_ranking
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
-    -- 4. Time Decay
+    -- 4. Time Decay - CORREGIDO
     time_decay AS (
       SELECT
         'Time Decay' AS attribution_model,
@@ -343,9 +345,17 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
         COUNT(*) AS touchpoints,
         SUM(conversion) AS conversions,
         SUM(revenue) AS revenue,
-        SUM(conversion * (1.0 / session_asc)) AS attributed_conversions,
-        SUM(revenue * (1.0 / session_asc)) AS attributed_revenue
-      FROM session_ranking
+        -- Fórmula corregida: normalizar los pesos
+        SUM(conversion * (time_decay_weight / user_total_weight.total_weight)) AS attributed_conversions,
+        SUM(revenue * (time_decay_weight / user_total_weight.total_weight)) AS attributed_revenue
+      FROM session_ranking sr
+      JOIN (
+        SELECT 
+          user_pseudo_id, 
+          SUM(time_decay_weight) as total_weight
+        FROM session_ranking
+        GROUP BY user_pseudo_id
+      ) user_total_weight ON sr.user_pseudo_id = user_total_weight.user_pseudo_id
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
     -- 5. Position Based
@@ -363,14 +373,14 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
           CASE 
             WHEN session_asc = 1 THEN conversion * 0.4
             WHEN session_desc = 1 THEN conversion * 0.4
-            ELSE conversion * 0.2
+            ELSE conversion * 0.2 / NULLIF(GREATEST(total_sessions - 2, 1), 0)
           END
         ) AS attributed_conversions,
         SUM(
           CASE 
             WHEN session_asc = 1 THEN revenue * 0.4
             WHEN session_desc = 1 THEN revenue * 0.4
-            ELSE revenue * 0.2
+            ELSE revenue * 0.2 / NULLIF(GREATEST(total_sessions - 2, 1), 0)
           END
         ) AS attributed_revenue
       FROM session_ranking
@@ -432,7 +442,7 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
       ROUND(CASE WHEN touchpoints > 0 THEN (attributed_conversions / touchpoints) * 100 ELSE 0 END, 2) AS conversion_rate,
       ROUND(CASE WHEN attributed_conversions > 0 THEN attributed_revenue / attributed_conversions ELSE 0 END, 2) AS revenue_per_conversion
     FROM all_models
-    WHERE attributed_conversions > 0
+    WHERE attributed_conversions > 0 OR conversions > 0
     ORDER BY attribution_model, attributed_revenue DESC
     LIMIT 1000
     """
