@@ -314,6 +314,7 @@ def mostrar_atribucion_multimodelo(df):
                 'Linear': '€{:,.2f}',
                 'diferencia_lc_fc': '€{:,.2f}'
             }))
+
 def mostrar_atribucion_completa(df):
     """Visualización para análisis de atribución completa (7 modelos)"""
     st.subheader("🎯 Atribución Multi-Modelo Completa (7 Modelos)")
@@ -336,13 +337,20 @@ def mostrar_atribucion_completa(df):
         - **🤖 Data Driven**: Combinación algorítmica de múltiples factores
         """)
     
-    # Resumen ejecutivo
+    # Resumen ejecutivo - CORREGIDO
     st.subheader("📈 Resumen Ejecutivo")
     
     total_models = df['attribution_model'].nunique()
     total_channels = df['utm_source'].nunique()
-    total_revenue = df['attributed_revenue'].sum() / total_models  # Evitar duplicación
-    total_conversions = df['attributed_conversions'].sum() / total_models
+    
+    # CORRECCIÓN: No dividir por total_models, usar valores únicos por modelo
+    model_summary = df.groupby('attribution_model').agg({
+        'attributed_revenue': 'sum',
+        'attributed_conversions': 'sum'
+    }).reset_index()
+    
+    total_revenue = model_summary['attributed_revenue'].sum()
+    total_conversions = model_summary['attributed_conversions'].sum()
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -353,6 +361,9 @@ def mostrar_atribucion_completa(df):
         st.metric("Ingresos Atribuidos", f"€{total_revenue:,.0f}")
     with col4:
         st.metric("Conversiones Atribuidas", f"{total_conversions:,.0f}")
+    
+    # Mostrar los modelos realmente detectados
+    st.write(f"**Modelos analizados:** {', '.join(df['attribution_model'].unique())}")
     
     # Comparativa entre modelos
     st.subheader("📊 Comparativa entre Modelos")
