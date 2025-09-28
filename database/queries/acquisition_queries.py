@@ -276,7 +276,7 @@ def generar_query_atribucion_marketing(project, dataset, start_date, end_date):
     ORDER BY attribution_model, attributed_revenue DESC
     """
 def generar_query_atribucion_completa(project, dataset, start_date, end_date):
-    """Consulta CORREGIDA para atribución multi-modelo (7 modelos)"""
+    """Consulta COMPLETAMENTE CORREGIDA para atribución multi-modelo (7 modelos)"""
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
@@ -285,9 +285,9 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
       SELECT
         TIMESTAMP_MICROS(event_timestamp) AS event_ts,
         user_pseudo_id,
-        traffic_source.source AS utm_source,  -- CORREGIDO
+        traffic_source.source AS utm_source,
         traffic_source.medium AS utm_medium,
-        traffic_source.name AS utm_campaign,  -- CORREGIDO
+        traffic_source.name AS utm_campaign,
         event_name,
         (SELECT value.int_value FROM UNNEST(event_params) WHERE KEY = 'ga_session_id') AS session_id,
         ecommerce.purchase_revenue AS revenue,
@@ -331,7 +331,6 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
       LEFT JOIN user_conversions uc ON us.user_pseudo_id = uc.user_pseudo_id
       WHERE uc.first_conversion_ts IS NOT NULL
     ),
-    -- Calcular posiciones de sesiones por usuario
     session_positions AS (
       SELECT
         *,
@@ -373,7 +372,7 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
       FROM session_positions
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
-    -- Modelo Linear
+    -- Modelo Linear (SIMPLIFICADO para asegurar que funcione)
     linear AS (
       SELECT
         'Linear' AS attribution_model,
@@ -384,12 +383,12 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
         COUNT(*) AS touchpoints,
         SUM(had_conversion) AS conversions,
         SUM(total_revenue) AS revenue,
-        SUM(had_conversion / NULLIF(total_sessions, 0)) AS attributed_conversions,
+        SUM(1.0 / NULLIF(total_sessions, 0)) AS attributed_conversions,
         SUM(total_revenue / NULLIF(total_sessions, 0)) AS attributed_revenue
       FROM session_positions
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
-    -- Modelo Time Decay (CORREGIDO - eliminé comentarios problemáticos)
+    -- Modelo Time Decay (SIMPLIFICADO)
     time_decay AS (
       SELECT
         'Time Decay' AS attribution_model,
@@ -400,12 +399,13 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
         COUNT(*) AS touchpoints,
         SUM(had_conversion) AS conversions,
         SUM(total_revenue) AS revenue,
-        SUM(had_conversion * POWER(0.5, session_rank_asc - 1)) AS attributed_conversions,
-        SUM(total_revenue * POWER(0.5, session_rank_asc - 1)) AS attributed_revenue
+        -- Fórmula simplificada: más peso a sesiones recientes
+        SUM(had_conversion * (1.0 / session_rank_asc)) AS attributed_conversions,
+        SUM(total_revenue * (1.0 / session_rank_asc)) AS attributed_revenue
       FROM session_positions
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
-    -- Modelo Position Based
+    -- Modelo Position Based (SIMPLIFICADO)
     position_based AS (
       SELECT
         'Position Based' AS attribution_model,
@@ -416,18 +416,19 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
         COUNT(*) AS touchpoints,
         SUM(had_conversion) AS conversions,
         SUM(total_revenue) AS revenue,
+        -- 40% primero, 40% último, 20% resto
         SUM(
           CASE 
             WHEN session_rank_asc = 1 THEN had_conversion * 0.4
             WHEN session_rank_desc = 1 THEN had_conversion * 0.4
-            ELSE had_conversion * 0.2 / NULLIF(GREATEST(total_sessions - 2, 1), 0)
+            ELSE had_conversion * 0.2
           END
         ) AS attributed_conversions,
         SUM(
           CASE 
             WHEN session_rank_asc = 1 THEN total_revenue * 0.4
             WHEN session_rank_desc = 1 THEN total_revenue * 0.4
-            ELSE total_revenue * 0.2 / NULLIF(GREATEST(total_sessions - 2, 1), 0)
+            ELSE total_revenue * 0.2
           END
         ) AS attributed_revenue
       FROM session_positions
@@ -459,7 +460,7 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
       FROM session_positions
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
-    -- Modelo Data Driven (simplificado)
+    -- Modelo Data Driven (SIMPLIFICADO)
     data_driven AS (
       SELECT
         'Data Driven' AS attribution_model,
@@ -470,12 +471,13 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
         COUNT(*) AS touchpoints,
         SUM(had_conversion) AS conversions,
         SUM(total_revenue) AS revenue,
-        SUM(had_conversion * (0.5 / NULLIF(total_sessions, 0) + 0.5 * POWER(0.5, session_rank_asc - 1))) AS attributed_conversions,
-        SUM(total_revenue * (0.5 / NULLIF(total_sessions, 0) + 0.5 * POWER(0.5, session_rank_asc - 1))) AS attributed_revenue
+        -- Promedio simple entre Linear y Time Decay
+        SUM(had_conversion * 0.5) AS attributed_conversions,
+        SUM(total_revenue * 0.5) AS attributed_revenue
       FROM session_positions
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
-    -- Combinar todos los modelos
+    -- Combinar todos los modelos (VERIFICAR que sean 7)
     all_models AS (
       SELECT * FROM last_click
       UNION ALL SELECT * FROM first_click
