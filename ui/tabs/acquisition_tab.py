@@ -2,13 +2,13 @@ import streamlit as st
 from database.queries import (
     generar_query_canales_trafico,
     generar_query_atribucion_marketing,
-    generar_query_atribucion_completa  # NUEVO
+    generar_query_atribucion_completa
 )
 from visualization.acquisition_visualizations import (
     mostrar_canales_trafico,
     mostrar_atribucion_marketing,
     mostrar_atribucion_multimodelo,
-    mostrar_atribucion_completa  # NUEVO
+    mostrar_atribucion_completa
 )
 from database.connection import run_query
 
@@ -45,7 +45,7 @@ def show_acquisition_tab(client, project, dataset, start_date, end_date):
                 df = run_query(client, query)
                 mostrar_atribucion_multimodelo(df)
     
-    # Sección 4: Atribución Completa (7 modelos) - NUEVA
+    # Sección 4: Atribución Completa (7 modelos) - CORREGIDO
     with st.expander("🚀 Atribución Completa (7 Modelos)", expanded=False):
         st.info("""
         **Análisis completo con 7 modelos de atribución:**
@@ -56,7 +56,12 @@ def show_acquisition_tab(client, project, dataset, start_date, end_date):
         
         if st.button("Análisis 7 Modelos", key="btn_7modelos"):
             with st.spinner("Calculando atribución completa (puede tardar)..."):
-                # CORRECCIÓN: Usar la consulta correcta para 7 modelos
+                # CORRECCIÓN CRÍTICA: Usar la consulta correcta para 7 modelos
                 query = generar_query_atribucion_completa(project, dataset, start_date, end_date)
                 df = run_query(client, query)
+                
+                # DEBUG: Mostrar información sobre los datos recibidos
+                st.write(f"📊 **Debug Info:** {len(df)} filas, {df['attribution_model'].nunique()} modelos únicos")
+                st.write(f"🔍 **Modelos encontrados:** {', '.join(df['attribution_model'].unique())}")
+                
                 mostrar_atribucion_completa(df)
