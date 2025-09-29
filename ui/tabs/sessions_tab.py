@@ -131,13 +131,3 @@ def show_sessions_tab(client, project, dataset, start_date, end_date):
     
     # Mensaje de completado
     st.success("✅ **Todas las consultas de Sesiones están disponibles!**")
-
-                st.session_state.sessions_hourly_data = df
-                st.session_state.sessions_hourly_show = True
-        
-        # Mostrar resultados si existen
-        if st.session_state.sessions_hourly_show and st.session_state.sessions_hourly_data is not None:
-            mostrar_hourly_sessions_performance(st.session_state.sessions_hourly_data)
-    
-    # Placeholder para próximas consultas
-    st.info("🚧 **Próximamente:** Session Behavior by Device, Exit Pages Analysis")
