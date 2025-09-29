@@ -190,3 +190,189 @@ def generar_query_tiempo_primera_compra(project, dataset, start_date, end_date):
     ORDER BY users_with_purchase DESC
     LIMIT 100
     """
+def generar_query_landing_page_attribution(project, dataset, start_date, end_date):
+    """
+    First Landing Page Attribution
+    Atribuye métricas clave (views, add-to-cart, purchases) a la primera landing page
+    """
+    start_date_str = start_date.strftime('%Y%m%d')
+    end_date_str = end_date.strftime('%Y%m%d')
+    
+    return f"""
+    -- First Landing Page Attribution
+    WITH user_first_landing AS (
+      SELECT 
+        user_pseudo_id,
+        ARRAY_AGG(
+          (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location')
+          ORDER BY event_timestamp 
+          LIMIT 1
+        )[OFFSET(0)] AS first_landing_page
+      FROM `{project}.{dataset}.events_*`
+      WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
+        AND event_name = 'page_view'
+      GROUP BY user_pseudo_id
+    ),
+    
+    user_events AS (
+      SELECT 
+        user_pseudo_id,
+        COUNTIF(event_name = 'page_view') AS total_page_views,
+        COUNTIF(event_name = 'view_item') AS total_view_items,
+        COUNTIF(event_name = 'add_to_cart') AS total_add_to_cart,
+        COUNTIF(event_name = 'begin_checkout') AS total_begin_checkout,
+        COUNTIF(event_name = 'purchase') AS total_purchases,
+        SUM(CASE WHEN event_name = 'purchase' THEN ecommerce.purchase_revenue ELSE 0 END) AS total_revenue
+      FROM `{project}.{dataset}.events_*`
+      WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
+      GROUP BY user_pseudo_id
+    )
+    
+    SELECT 
+      ufl.first_landing_page,
+      COUNT(DISTINCT ufl.user_pseudo_id) AS unique_users,
+      SUM(ue.total_page_views) AS total_page_views,
+      SUM(ue.total_view_items) AS total_view_items,
+      SUM(ue.total_add_to_cart) AS total_add_to_cart,
+      SUM(ue.total_begin_checkout) AS total_begin_checkout,
+      SUM(ue.total_purchases) AS total_purchases,
+      SUM(ue.total_revenue) AS total_revenue,
+      ROUND(SAFE_DIVIDE(SUM(ue.total_purchases), COUNT(DISTINCT ufl.user_pseudo_id)) * 100, 2) AS conversion_rate,
+      ROUND(SAFE_DIVIDE(SUM(ue.total_revenue), COUNT(DISTINCT ufl.user_pseudo_id)), 2) AS revenue_per_user
+    FROM user_first_landing ufl
+    LEFT JOIN user_events ue ON ufl.user_pseudo_id = ue.user_pseudo_id
+    WHERE ufl.first_landing_page IS NOT NULL
+    GROUP BY ufl.first_landing_page
+    HAVING unique_users >= 10
+    ORDER BY total_revenue DESC
+    LIMIT 100
+    """
+
+def generar_query_adquisicion_usuarios(project, dataset, start_date, end_date):
+    """
+    User Acquisition by Source/Medium with Channel Grouping
+    Agrupa usuarios por fuente, medio y categorías predefinidas
+    """
+    start_date_str = start_date.strftime('%Y%m%d')
+    end_date_str = end_date.strftime('%Y%m%d')
+    
+    return f"""
+    -- User Acquisition by Source/Medium with Channel Grouping
+    WITH user_first_source AS (
+      SELECT 
+        user_pseudo_id,
+        ARRAY_AGG(traffic_source.source ORDER BY event_timestamp LIMIT 1)[OFFSET(0)] AS first_source,
+        ARRAY_AGG(traffic_source.medium ORDER BY event_timestamp LIMIT 1)[OFFSET(0)] AS first_medium,
+        MIN(PARSE_DATE('%Y%m%d', event_date)) AS acquisition_date
+      FROM `{project}.{dataset}.events_*`
+      WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
+      GROUP BY user_pseudo_id
+    ),
+    
+    channel_grouping AS (
+      SELECT 
+        user_pseudo_id,
+        first_source,
+        first_medium,
+        acquisition_date,
+        CASE
+          WHEN first_source IS NULL THEN 'Direct'
+          WHEN REGEXP_CONTAINS(first_source, r'(?i)google|bing|yahoo|duckduckgo|ecosia|yandex|baidu')
+            AND first_medium = 'organic' THEN 'Organic Search'
+          WHEN REGEXP_CONTAINS(first_medium, r'(?i)cpc|ppc|paid') THEN 'Paid Search'
+          WHEN REGEXP_CONTAINS(first_source, r'(?i)facebook|instagram|twitter|linkedin|pinterest|tiktok')
+            AND REGEXP_CONTAINS(first_medium, r'(?i)social|cpc|ppc|paid') THEN 'Paid Social'
+          WHEN REGEXP_CONTAINS(first_source, r'(?i)facebook|instagram|twitter|linkedin|pinterest|tiktok')
+            OR first_medium = 'social' THEN 'Organic Social'
+          WHEN REGEXP_CONTAINS(first_medium, r'(?i)email|e-mail') THEN 'Email'
+          WHEN first_medium = 'referral' THEN 'Referral'
+          WHEN REGEXP_CONTAINS(first_medium, r'(?i)display|banner|cpm') THEN 'Display'
+          WHEN REGEXP_CONTAINS(first_source, r'(?i)youtube|vimeo') THEN 'Video'
+          ELSE 'Other'
+        END AS channel_group
+      FROM user_first_source
+    ),
+    
+    user_metrics AS (
+      SELECT 
+        user_pseudo_id,
+        COUNT(DISTINCT CONCAT(
+          CAST(user_pseudo_id AS STRING), 
+          '-', 
+          CAST((SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') AS STRING)
+        )) AS total_sessions,
+        COUNTIF(event_name = 'purchase') AS total_purchases,
+        SUM(CASE WHEN event_name = 'purchase' THEN ecommerce.purchase_revenue ELSE 0 END) AS total_revenue
+      FROM `{project}.{dataset}.events_*`
+      WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
+      GROUP BY user_pseudo_id
+    )
+    
+    SELECT 
+      cg.channel_group,
+      cg.first_source,
+      cg.first_medium,
+      COUNT(DISTINCT cg.user_pseudo_id) AS total_users,
+      SUM(um.total_sessions) AS total_sessions,
+      SUM(um.total_purchases) AS total_purchases,
+      SUM(um.total_revenue) AS total_revenue,
+      ROUND(SAFE_DIVIDE(SUM(um.total_sessions), COUNT(DISTINCT cg.user_pseudo_id)), 2) AS avg_sessions_per_user,
+      ROUND(SAFE_DIVIDE(SUM(um.total_purchases), COUNT(DISTINCT cg.user_pseudo_id)) * 100, 2) AS conversion_rate,
+      ROUND(SAFE_DIVIDE(SUM(um.total_revenue), COUNT(DISTINCT cg.user_pseudo_id)), 2) AS revenue_per_user
+    FROM channel_grouping cg
+    LEFT JOIN user_metrics um ON cg.user_pseudo_id = um.user_pseudo_id
+    GROUP BY cg.channel_group, cg.first_source, cg.first_medium
+    HAVING total_users >= 5
+    ORDER BY total_users DESC
+    LIMIT 100
+    """
+
+def generar_query_conversion_mensual(project, dataset, start_date, end_date):
+    """
+    Monthly User Conversion Rate
+    Calcula la tasa de conversión mensual (usuarios convertidos / usuarios totales)
+    """
+    start_date_str = start_date.strftime('%Y%m%d')
+    end_date_str = end_date.strftime('%Y%m%d')
+    
+    return f"""
+    -- Monthly User Conversion Rate
+    WITH monthly_users AS (
+      SELECT 
+        FORMAT_DATE('%Y-%m', PARSE_DATE('%Y%m%d', event_date)) AS month,
+        user_pseudo_id
+      FROM `{project}.{dataset}.events_*`
+      WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
+        AND user_pseudo_id IS NOT NULL
+      GROUP BY month, user_pseudo_id
+    ),
+    
+    monthly_converters AS (
+      SELECT 
+        FORMAT_DATE('%Y-%m', PARSE_DATE('%Y%m%d', event_date)) AS month,
+        user_pseudo_id,
+        SUM(ecommerce.purchase_revenue) AS user_revenue,
+        COUNT(DISTINCT ecommerce.transaction_id) AS user_transactions
+      FROM `{project}.{dataset}.events_*`
+      WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
+        AND event_name = 'purchase'
+        AND ecommerce.purchase_revenue IS NOT NULL
+        AND ecommerce.purchase_revenue > 0
+        AND user_pseudo_id IS NOT NULL
+      GROUP BY month, user_pseudo_id
+    )
+    
+    SELECT 
+      mu.month,
+      COUNT(DISTINCT mu.user_pseudo_id) AS total_users,
+      COUNT(DISTINCT mc.user_pseudo_id) AS converted_users,
+      ROUND(SAFE_DIVIDE(COUNT(DISTINCT mc.user_pseudo_id), COUNT(DISTINCT mu.user_pseudo_id)) * 100, 2) AS conversion_rate,
+      SUM(mc.user_revenue) AS total_revenue,
+      SUM(mc.user_transactions) AS total_transactions,
+      ROUND(SAFE_DIVIDE(SUM(mc.user_revenue), COUNT(DISTINCT mc.user_pseudo_id)), 2) AS avg_revenue_per_converter,
+      ROUND(SAFE_DIVIDE(SUM(mc.user_revenue), COUNT(DISTINCT mu.user_pseudo_id)), 2) AS avg_revenue_per_user
+    FROM monthly_users mu
+    LEFT JOIN monthly_converters mc ON mu.month = mc.month AND mu.user_pseudo_id = mc.user_pseudo_id
+    GROUP BY mu.month
+    ORDER BY mu.month DESC
+    """
