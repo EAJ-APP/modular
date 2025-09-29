@@ -434,19 +434,21 @@ def mostrar_atribucion_completa(df):
     if 'selected_model' not in st.session_state:
         st.session_state.selected_model = df['attribution_model'].unique()[0] if len(df['attribution_model'].unique()) > 0 else ""
     
-    # Selector que mantiene el estado
+    # CORRECCIÓN - Usar session_state para mantener el estado
+    if 'selected_model' not in st.session_state:
+        st.session_state.selected_model = df['attribution_model'].unique()[0]
+    
     selected_model = st.selectbox(
         "Seleccionar modelo para análisis detallado:",
         df['attribution_model'].unique(),
-        key='model_selector',
-        index=0  # Siempre seleccionar el primero por defecto
+        key='model_selector'
     )
     
     # Actualizar session_state cuando cambia la selección
     if selected_model != st.session_state.selected_model:
         st.session_state.selected_model = selected_model
     
-    # Usar el modelo del session_state
+    # Usar siempre el valor de session_state
     selected_model = st.session_state.selected_model
     
     if selected_model:
