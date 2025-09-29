@@ -39,7 +39,8 @@ from .users_visualizations import (
 from .sessions_visualizations import (
     mostrar_low_converting_sessions,
     mostrar_session_path_analysis,
-    mostrar_hourly_sessions_performance
+    mostrar_hourly_sessions_performance,
+    mostrar_exit_pages_analysis
 )
 
 from .common_charts import (
@@ -81,6 +82,7 @@ __all__ = [
     'mostrar_low_converting_sessions',
     'mostrar_session_path_analysis',
     'mostrar_hourly_sessions_performance',
+    'mostrar_exit_pages_analysis',
     # Common
     'create_pie_chart',
     'create_bar_chart',
