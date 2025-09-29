@@ -67,23 +67,37 @@ def show_acquisition_tab(client, project, dataset, start_date, end_date):
                 df = run_query(client, query)
                 mostrar_atribucion_multimodelo(df)
     
-    # Sección 4: Atribución Completa (7 modelos) - CORREGIDO
-    with st.expander("🚀 Atribución Completa (7 Modelos)", expanded=False):
-        st.info("""
-        **Análisis completo con 7 modelos de atribución:**
-        - Last Click, First Click, Linear
-        - Time Decay, Position Based  
-        - Last Non-Direct, Data Driven
-        """)
-        
-        if st.button("Análisis 7 Modelos", key="btn_7modelos"):
-            with st.spinner("Calculando atribución completa (puede tardar)..."):
-                # CORRECCIÓN CRÍTICA: Usar la consulta correcta para 7 modelos
-                query = generar_query_atribucion_completa(project, dataset, start_date, end_date)
-                df = run_query(client, query)
-                
-                # DEBUG: Mostrar información sobre los datos recibidos
-                st.write(f"📊 **Debug Info:** {len(df)} filas, {df['attribution_model'].nunique()} modelos únicos")
-                st.write(f"🔍 **Modelos encontrados:** {', '.join(df['attribution_model'].unique())}")
-                
-                mostrar_atribucion_completa(df)
+# Sección 4: Atribución Completa (7 modelos) - CORREGIDO
+st.subheader("🚀 Atribución Completa (7 Modelos)")
+
+# Selector de modelo FUERA del expander
+if 'df_attribucion_completa' in st.session_state and not st.session_state.df_attribucion_completa.empty:
+    modelos_disponibles = st.session_state.df_attribucion_completa['attribution_model'].unique()
+    selected_model = st.selectbox(
+        "Seleccionar modelo para análisis detallado:",
+        modelos_disponibles,
+        key='modelo_selector_global'
+    )
+
+with st.expander("🔍 Análisis Completo de Atribución", expanded=True):
+    st.info("""
+    **Análisis completo con 7 modelos de atribución:**
+    - Last Click, First Click, Linear
+    - Time Decay, Position Based  
+    - Last Non-Direct, Data Driven
+    """)
+    
+    if st.button("Ejecutar Análisis 7 Modelos", key="btn_7modelos"):
+        with st.spinner("Calculando atribución completa (puede tardar)..."):
+            query = generar_query_atribucion_completa(project, dataset, start_date, end_date)
+            df = run_query(client, query)
+            st.session_state.df_attribucion_completa = df  # Guardar en session_state
+            
+            st.write(f"📊 **Info:** {len(df)} filas, {df['attribution_model'].nunique()} modelos únicos")
+            st.write(f"🔍 **Modelos encontrados:** {', '.join(df['attribution_model'].unique())}")
+            
+            mostrar_atribucion_completa(df)
+    
+    # Mostrar datos si ya están cargados
+    if 'df_attribucion_completa' in st.session_state and not st.session_state.df_attribucion_completa.empty:
+        mostrar_atribucion_completa(st.session_state.df_attribucion_completa)
