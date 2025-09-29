@@ -315,6 +315,8 @@ def mostrar_atribucion_multimodelo(df):
                 'diferencia_lc_fc': '€{:,.2f}'
             }))
 
+# REEMPLAZAR solo la función mostrar_atribucion_completa en acquisition_visualizations.py
+
 def mostrar_atribucion_completa(df):
     """Visualización para análisis de atribución completa (7 modelos)"""
     st.subheader("🎯 Atribución Multi-Modelo Completa (7 Modelos)")
@@ -428,23 +430,29 @@ def mostrar_atribucion_completa(df):
             'variability': '{:.3f}'
         }))
     
-    # SOLUCIÓN CORREGIDA: Eliminar el rerun innecesario
+    # SOLUCIÓN DEFINITIVA: Usar on_change callback en lugar de monitorear cambios
     st.subheader("🔍 Análisis Detallado por Modelo")
     
-    # Inicializar session_state si no existe
-    if 'attribucion_completa_selected_model' not in st.session_state:
-        st.session_state['attribucion_completa_selected_model'] = df['attribution_model'].unique()[0] if len(df['attribution_model'].unique()) > 0 else ""
+    # Key único para el selectbox de esta función
+    selectbox_key = 'attribution_complete_model_selector'
     
-    # Selectbox simple que actualiza automáticamente el session_state
+    # Inicializar session_state si no existe
+    if selectbox_key not in st.session_state:
+        st.session_state[selectbox_key] = df['attribution_model'].unique()[0] if len(df['attribution_model'].unique()) > 0 else ""
+    
+    # Función callback que se ejecuta ANTES del rerun
+    def on_model_change():
+        # Este callback se ejecuta antes del rerun, manteniendo el contexto
+        pass
+    
+    # Selectbox con callback
     selected_model = st.selectbox(
         "Seleccionar modelo para análisis detallado:",
         options=list(df['attribution_model'].unique()),
-        index=list(df['attribution_model'].unique()).index(st.session_state['attribucion_completa_selected_model']) if st.session_state['attribucion_completa_selected_model'] in df['attribution_model'].unique() else 0,
-        key="attribution_model_detailed_selector"
+        index=list(df['attribution_model'].unique()).index(st.session_state[selectbox_key]) if st.session_state[selectbox_key] in df['attribution_model'].unique() else 0,
+        key=selectbox_key,
+        on_change=on_model_change
     )
-    
-    # Actualizar session_state sin rerun
-    st.session_state['attribucion_completa_selected_model'] = selected_model
     
     if selected_model:
         model_data = df[df['attribution_model'] == selected_model].nlargest(15, 'attributed_revenue')
