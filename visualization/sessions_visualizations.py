@@ -4,6 +4,317 @@ import plotly.express as px
 import plotly.graph_objects as go
 from config.settings import Settings
 
+def mostrar_exit_pages_analysis(df):
+    """Visualización para Most Frequent Exit Pages Analysis"""
+    st.subheader("🚪 Análisis de Páginas de Salida")
+    
+    if df.empty:
+        st.warning("No hay datos de páginas de salida para el rango seleccionado")
+        return
+    
+    # Métricas generales
+    total_sessions = df['sessions'].sum()
+    unique_exit_pages = len(df)
+    avg_sessions_per_page = df['sessions'].mean()
+    top_exit_rate = df.iloc[0]['exit_percentage'] if len(df) > 0 else 0
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Sesiones", f"{total_sessions:,}")
+    with col2:
+        st.metric("Páginas de Salida Únicas", f"{unique_exit_pages}")
+    with col3:
+        st.metric("Sesiones/Página (Avg)", f"{avg_sessions_per_page:.0f}")
+    with col4:
+        st.metric("Mayor % Salida", f"{top_exit_rate:.1f}%")
+    
+    # Acortar URLs para mejor visualización
+    def shorten_url(url, max_length=60):
+        if pd.isna(url):
+            return "(not set)"
+        return url[:max_length] + '...' if len(str(url)) > max_length else url
+    
+    df['exit_page_short'] = df['exit_page_path'].apply(shorten_url)
+    
+    # Filtro por número mínimo de sesiones
+    st.subheader("🔍 Filtros")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        min_sessions_filter = st.slider(
+            "Mínimo de sesiones:",
+            min_value=1,
+            max_value=int(df['sessions'].max()) if len(df) > 0 else 100,
+            value=10,
+            key="exit_min_sessions"
+        )
+    
+    with col2:
+        top_n = st.selectbox(
+            "Mostrar top:",
+            [10, 20, 30, 50, 100],
+            index=1,
+            key="exit_top_n"
+        )
+    
+    # Aplicar filtros
+    df_filtered = df[df['sessions'] >= min_sessions_filter].head(top_n)
+    
+    if df_filtered.empty:
+        st.warning("⚠️ No hay datos con los filtros seleccionados. Reduce el mínimo de sesiones.")
+        return
+    
+    # Mostrar tabla con datos
+    st.subheader("📊 Datos Detallados")
+    
+    st.dataframe(
+        df_filtered[['exit_page_path', 'sessions', 'exit_percentage']].style.format({
+            'sessions': '{:,}',
+            'exit_percentage': '{:.2f}%'
+        }),
+        use_container_width=True,
+        height=400
+    )
+    
+    # Top páginas de salida
+    st.subheader(f"🏆 Top {min(top_n, len(df_filtered))} Páginas de Salida")
+    
+    top_exits = df_filtered.head(top_n)
+    
+    fig_top_exits = px.bar(
+        top_exits,
+        x='sessions',
+        y='exit_page_short',
+        orientation='h',
+        title=f'Top {min(top_n, len(top_exits))} Páginas con Mayor Abandono',
+        labels={'sessions': 'Sesiones', 'exit_page_short': 'Página de Salida'},
+        color='exit_percentage',
+        color_continuous_scale='Reds',
+        hover_data={'exit_page_path': True, 'exit_percentage': ':.2f'}
+    )
+    fig_top_exits.update_layout(
+        yaxis={'categoryorder': 'total ascending'},
+        height=max(500, len(top_exits) * 25),
+        showlegend=False
+    )
+    st.plotly_chart(fig_top_exits, use_container_width=True)
+    
+    # Distribución acumulativa
+    st.subheader("📈 Análisis de Concentración")
+    
+    # Calcular porcentaje acumulativo
+    df_sorted = df.sort_values('sessions', ascending=False).reset_index(drop=True)
+    df_sorted['cumulative_sessions'] = df_sorted['sessions'].cumsum()
+    df_sorted['cumulative_percentage'] = (df_sorted['cumulative_sessions'] / total_sessions * 100).round(2)
+    
+    # Gráfico de Pareto
+    fig_pareto = go.Figure()
+    
+    fig_pareto.add_trace(go.Bar(
+        x=list(range(1, len(df_sorted.head(30)) + 1)),
+        y=df_sorted.head(30)['sessions'],
+        name='Sesiones',
+        marker_color='lightblue',
+        yaxis='y'
+    ))
+    
+    fig_pareto.add_trace(go.Scatter(
+        x=list(range(1, len(df_sorted.head(30)) + 1)),
+        y=df_sorted.head(30)['cumulative_percentage'],
+        name='% Acumulado',
+        mode='lines+markers',
+        line=dict(color='red', width=2),
+        yaxis='y2'
+    ))
+    
+    fig_pareto.update_layout(
+        title='Análisis de Pareto - Concentración de Salidas (Top 30)',
+        xaxis_title='Páginas (ordenadas por sesiones)',
+        yaxis=dict(title='Sesiones', side='left'),
+        yaxis2=dict(title='% Acumulado', side='right', overlaying='y', range=[0, 100]),
+        hovermode='x unified',
+        height=500
+    )
+    
+    st.plotly_chart(fig_pareto, use_container_width=True)
+    
+    # Métricas de concentración
+    top_10_pct = df_sorted.head(10)['exit_percentage'].sum()
+    top_20_pct = df_sorted.head(20)['exit_percentage'].sum()
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Top 10 Páginas", f"{top_10_pct:.1f}% de salidas")
+    with col2:
+        st.metric("Top 20 Páginas", f"{top_20_pct:.1f}% de salidas")
+    with col3:
+        # Calcular índice de concentración (cuántas páginas acumulan el 80%)
+        pages_80pct = len(df_sorted[df_sorted['cumulative_percentage'] <= 80])
+        st.metric("Páginas para 80% salidas", f"{pages_80pct}")
+    
+    # Distribución de páginas de salida
+    st.subheader("📊 Distribución de Sesiones")
+    
+    # Crear rangos de sesiones
+    df_filtered['session_range'] = pd.cut(
+        df_filtered['sessions'],
+        bins=[0, 50, 100, 500, 1000, float('inf')],
+        labels=['1-50', '51-100', '101-500', '501-1000', '1000+']
+    )
+    
+    range_dist = df_filtered.groupby('session_range', observed=True).size().reset_index(name='count')
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Pie chart de distribución por rango
+        fig_dist = px.pie(
+            range_dist,
+            values='count',
+            names='session_range',
+            title='Distribución de Páginas por Rango de Sesiones',
+            color_discrete_sequence=px.colors.sequential.RdBu
+        )
+        st.plotly_chart(fig_dist, use_container_width=True)
+    
+    with col2:
+        # Histograma de sesiones
+        fig_hist = px.histogram(
+            df_filtered,
+            x='sessions',
+            nbins=30,
+            title='Distribución de Sesiones por Página',
+            labels={'sessions': 'Sesiones', 'count': 'Número de Páginas'},
+            color_discrete_sequence=['steelblue']
+        )
+        fig_hist.update_layout(showlegend=False)
+        st.plotly_chart(fig_hist, use_container_width=True)
+    
+    # Análisis de patrones en URLs
+    st.subheader("🔍 Análisis de Patrones de URL")
+    
+    # Extraer secciones del sitio (primer nivel de path)
+    df_filtered['section'] = df_filtered['exit_page_path'].str.extract(r'^/([^/]+)')[0].fillna('home')
+    
+    section_stats = df_filtered.groupby('section').agg({
+        'sessions': 'sum',
+        'exit_page_path': 'count'
+    }).reset_index()
+    section_stats.columns = ['section', 'total_sessions', 'page_count']
+    section_stats = section_stats.sort_values('total_sessions', ascending=False).head(15)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Sesiones por sección
+        fig_sections = px.bar(
+            section_stats,
+            x='section',
+            y='total_sessions',
+            title='Sesiones de Salida por Sección del Sitio',
+            labels={'section': 'Sección', 'total_sessions': 'Sesiones'},
+            color='total_sessions',
+            color_continuous_scale='Oranges'
+        )
+        fig_sections.update_layout(xaxis_tickangle=-45, showlegend=False)
+        st.plotly_chart(fig_sections, use_container_width=True)
+    
+    with col2:
+        # Tabla de secciones
+        st.write("**Top Secciones con Más Salidas:**")
+        st.dataframe(
+            section_stats[['section', 'total_sessions', 'page_count']].style.format({
+                'total_sessions': '{:,}',
+                'page_count': '{:,}'
+            }),
+            use_container_width=True
+        )
+    
+    # Insights y recomendaciones
+    st.subheader("💡 Insights Clave")
+    
+    # Identificar páginas críticas
+    top_exit = df_sorted.iloc[0] if len(df_sorted) > 0 else None
+    high_exit_pages = df_sorted[df_sorted['exit_percentage'] > 5].head(10)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("**🚨 Página con Mayor Abandono:**")
+        if top_exit is not None:
+            st.write(f"- **Página:** {shorten_url(top_exit['exit_page_path'], 50)}")
+            st.write(f"- **Sesiones:** {top_exit['sessions']:,}")
+            st.write(f"- **% del Total:** {top_exit['exit_percentage']:.2f}%")
+    
+    with col2:
+        st.write("**⚠️ Páginas Críticas (>5% salidas):**")
+        if not high_exit_pages.empty:
+            for _, row in high_exit_pages.iterrows():
+                st.write(f"- {shorten_url(row['exit_page_path'], 40)}: {row['exit_percentage']:.1f}%")
+        else:
+            st.write("✅ No hay páginas individuales con >5% de salidas")
+    
+    # Recomendaciones
+    st.subheader("🎯 Recomendaciones")
+    
+    st.info(f"""
+    **Plan de Acción para Reducir Abandonos:**
+    
+    🔍 **Priorizar optimización:**
+    - Las top {pages_80pct} páginas concentran el 80% de las salidas
+    - Enfoca esfuerzos en estas páginas para mayor impacto
+    
+    🎯 **Páginas críticas identificadas:**
+    - {len(high_exit_pages)} páginas con >5% de tasa de salida
+    - Requieren revisión urgente de UX y contenido
+    
+    ⚡ **Acciones recomendadas:**
+    1. Analizar tiempo en página antes de salir
+    2. Revisar llamadas a la acción (CTAs)
+    3. Verificar errores técnicos o problemas de carga
+    4. A/B testing en páginas con mayor abandono
+    5. Agregar contenido relacionado o next steps claros
+    
+    💰 **Impacto potencial:**
+    - Reducir un 10% las salidas de las top 10 páginas podría retener ~{int(df_sorted.head(10)['sessions'].sum() * 0.1):,} sesiones adicionales
+    """)
+    
+    # Comparativa: Páginas de entrada vs salida
+    st.subheader("🔄 Insight Adicional")
+    
+    # Identificar páginas que son tanto entrada como salida
+    entrance_keywords = ['home', 'index', 'landing', 'categoria', 'product']
+    potential_entrance_exits = df_filtered[
+        df_filtered['exit_page_path'].str.contains('|'.join(entrance_keywords), case=False, na=False)
+    ]
+    
+    if not potential_entrance_exits.empty:
+        st.warning(f"""
+        **⚠️ Páginas que pueden ser tanto entrada como salida:**
+        
+        Se detectaron {len(potential_entrance_exits)} páginas que parecen ser landing pages pero también tienen alta tasa de salida.
+        
+        Esto puede indicar:
+        - Problemas de expectativas vs realidad
+        - Falta de contenido relevante
+        - Problemas técnicos en la primera interacción
+        
+        **Páginas a revisar:**
+        """)
+        
+        for _, row in potential_entrance_exits.head(5).iterrows():
+            st.write(f"- {shorten_url(row['exit_page_path'], 60)}: {row['sessions']:,} salidas ({row['exit_percentage']:.1f}%)")
+    
+    # Botón de descarga
+    if st.button("📥 Descargar Datos CSV", key="download_exit_pages"):
+        csv = df.to_csv(index=False)
+        st.download_button(
+            label="Descargar CSV",
+            data=csv,
+            file_name="exit_pages_analysis.csv",
+            mime="text/csv"
+        )
+
 def mostrar_hourly_sessions_performance(df):
     """Visualización para Hourly Sessions Ecommerce Performance"""
     st.subheader("⏰ Rendimiento de Sesiones por Hora")
