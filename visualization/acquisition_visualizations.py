@@ -427,26 +427,34 @@ def mostrar_atribucion_completa(df):
             'variability': '{:.3f}'
         }))
     
-    # CORRECCIÓN: Análisis detallado por modelo - SOLUCIÓN DEFINITIVA
+    # SOLUCIÓN DEFINITIVA: Usar un container y manejo específico del estado
     st.subheader("🔍 Análisis Detallado por Modelo")
     
-    # Inicializar session_state si no existe
-    if 'selected_model_detail' not in st.session_state:
-        st.session_state.selected_model_detail = df['attribution_model'].unique()[0] if len(df['attribution_model'].unique()) > 0 else ""
+    # Inicializar session_state si no existe - con un key único para esta función
+    session_key = 'attribucion_completa_selected_model'
+    if session_key not in st.session_state:
+        st.session_state[session_key] = df['attribution_model'].unique()[0] if len(df['attribution_model'].unique()) > 0 else ""
     
-    # Selector SIN key conflictivo
-    selected_model = st.selectbox(
-        "Seleccionar modelo para análisis detallado:",
-        df['attribution_model'].unique(),
-        index=0
-    )
-    
-    # Actualizar session_state cuando cambia la selección
-    if selected_model != st.session_state.selected_model_detail:
-        st.session_state.selected_model_detail = selected_model
+    # Usar un container para aislar el componente
+    with st.container():
+        # Obtener el índice actual para mantener la selección
+        current_options = list(df['attribution_model'].unique())
+        current_index = current_options.index(st.session_state[session_key]) if st.session_state[session_key] in current_options else 0
+        
+        selected_model = st.selectbox(
+            "Seleccionar modelo para análisis detallado:",
+            options=current_options,
+            index=current_index,
+            key="attribution_model_detailed_selector"
+        )
+        
+        # Actualizar session_state y forzar rerun si cambia
+        if selected_model != st.session_state[session_key]:
+            st.session_state[session_key] = selected_model
+            st.rerun()
     
     # Usar siempre el modelo del session_state
-    selected_model = st.session_state.selected_model_detail
+    selected_model = st.session_state[session_key]
     
     if selected_model:
         model_data = df[df['attribution_model'] == selected_model].nlargest(15, 'attributed_revenue')
