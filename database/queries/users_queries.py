@@ -7,7 +7,7 @@ def generar_query_retencion_semanal(project, dataset, start_date, end_date):
     end_date_str = end_date.strftime('%Y%m%d')
     
     return f"""
-    -- Weekly User Retention Analysis
+    -- Weekly User Retention Analysis (CORREGIDO - sin división por cero)
     WITH user_first_engagement AS (
       SELECT 
         user_pseudo_id,
@@ -46,16 +46,26 @@ def generar_query_retencion_semanal(project, dataset, start_date, end_date):
       COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 2 THEN user_pseudo_id END) AS week_2_users,
       COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 3 THEN user_pseudo_id END) AS week_3_users,
       COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 4 THEN user_pseudo_id END) AS week_4_users,
-      ROUND(COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 1 THEN user_pseudo_id END) / 
-            COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 0 THEN user_pseudo_id END) * 100, 2) AS week_1_retention_pct,
-      ROUND(COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 2 THEN user_pseudo_id END) / 
-            COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 0 THEN user_pseudo_id END) * 100, 2) AS week_2_retention_pct,
-      ROUND(COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 3 THEN user_pseudo_id END) / 
-            COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 0 THEN user_pseudo_id END) * 100, 2) AS week_3_retention_pct,
-      ROUND(COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 4 THEN user_pseudo_id END) / 
-            COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 0 THEN user_pseudo_id END) * 100, 2) AS week_4_retention_pct
+      -- SAFE_DIVIDE evita errores de división por cero
+      ROUND(SAFE_DIVIDE(
+        COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 1 THEN user_pseudo_id END),
+        COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 0 THEN user_pseudo_id END)
+      ) * 100, 2) AS week_1_retention_pct,
+      ROUND(SAFE_DIVIDE(
+        COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 2 THEN user_pseudo_id END),
+        COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 0 THEN user_pseudo_id END)
+      ) * 100, 2) AS week_2_retention_pct,
+      ROUND(SAFE_DIVIDE(
+        COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 3 THEN user_pseudo_id END),
+        COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 0 THEN user_pseudo_id END)
+      ) * 100, 2) AS week_3_retention_pct,
+      ROUND(SAFE_DIVIDE(
+        COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 4 THEN user_pseudo_id END),
+        COUNT(DISTINCT CASE WHEN weeks_since_first_engagement = 0 THEN user_pseudo_id END)
+      ) * 100, 2) AS week_4_retention_pct
     FROM user_retention
     GROUP BY cohort_week
+    HAVING week_0_users > 0  -- Filtrar cohortes sin usuarios
     ORDER BY cohort_week DESC
     """
 
@@ -68,14 +78,18 @@ def generar_query_clv_sesiones(project, dataset, start_date, end_date):
     end_date_str = end_date.strftime('%Y%m%d')
     
     return f"""
-    -- Customer Lifetime Value with Sessions
+    -- Customer Lifetime Value with Sessions (CORREGIDO)
     WITH user_sessions AS (
       SELECT 
         user_pseudo_id,
-        COUNT(DISTINCT CONCAT(user_pseudo_id, '-', 
-          (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id'))) AS total_sessions
+        COUNT(DISTINCT CONCAT(
+          CAST(user_pseudo_id AS STRING), 
+          '-', 
+          CAST((SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') AS STRING)
+        )) AS total_sessions
       FROM `{project}.{dataset}.events_*`
       WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
+        AND user_pseudo_id IS NOT NULL
       GROUP BY user_pseudo_id
     ),
     
@@ -88,6 +102,8 @@ def generar_query_clv_sesiones(project, dataset, start_date, end_date):
       WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
         AND event_name = 'purchase'
         AND ecommerce.purchase_revenue IS NOT NULL
+        AND ecommerce.purchase_revenue > 0
+        AND user_pseudo_id IS NOT NULL
       GROUP BY user_pseudo_id
     )
     
@@ -96,13 +112,14 @@ def generar_query_clv_sesiones(project, dataset, start_date, end_date):
       us.total_sessions,
       COALESCE(ur.total_revenue, 0) AS customer_lifetime_value,
       COALESCE(ur.total_transactions, 0) AS total_transactions,
-      ROUND(COALESCE(ur.total_revenue, 0) / us.total_sessions, 2) AS revenue_per_session,
+      ROUND(SAFE_DIVIDE(COALESCE(ur.total_revenue, 0), us.total_sessions), 2) AS revenue_per_session,
       CASE 
-        WHEN ur.total_revenue IS NOT NULL THEN 'Buyer'
+        WHEN ur.total_revenue IS NOT NULL AND ur.total_revenue > 0 THEN 'Buyer'
         ELSE 'Non-Buyer'
       END AS user_type
     FROM user_sessions us
     LEFT JOIN user_revenue ur ON us.user_pseudo_id = ur.user_pseudo_id
+    WHERE us.total_sessions > 0
     ORDER BY customer_lifetime_value DESC
     LIMIT 1000
     """
