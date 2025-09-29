@@ -27,6 +27,12 @@ from .events_visualizations import (
     mostrar_metricas_diarias
 )
 
+from .users_visualizations import (
+    mostrar_retencion_semanal,
+    mostrar_clv_sesiones,
+    mostrar_tiempo_primera_compra
+)
+
 from .common_charts import (
     create_pie_chart,
     create_bar_chart,
@@ -55,6 +61,10 @@ __all__ = [
     'mostrar_eventos_por_fecha',
     'mostrar_parametros_evento',
     'mostrar_metricas_diarias',
+    # Users
+    'mostrar_retencion_semanal',
+    'mostrar_clv_sesiones',
+    'mostrar_tiempo_primera_compra',
     # Common
     'create_pie_chart',
     'create_bar_chart',
