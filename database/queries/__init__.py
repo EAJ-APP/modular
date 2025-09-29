@@ -29,7 +29,10 @@ from .events_queries import (
 from .users_queries import (
     generar_query_retencion_semanal,
     generar_query_clv_sesiones,
-    generar_query_tiempo_primera_compra
+    generar_query_tiempo_primera_compra,
+    generar_query_landing_page_attribution,
+    generar_query_adquisicion_usuarios,
+    generar_query_conversion_mensual
 )
 
 __all__ = [
@@ -56,5 +59,8 @@ __all__ = [
     # Users
     'generar_query_retencion_semanal',
     'generar_query_clv_sesiones',
-    'generar_query_tiempo_primera_compra'
+    'generar_query_tiempo_primera_compra',
+    'generar_query_landing_page_attribution',
+    'generar_query_adquisicion_usuarios',
+    'generar_query_conversion_mensual'
 ]
