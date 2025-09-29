@@ -35,6 +35,10 @@ from .users_queries import (
     generar_query_conversion_mensual
 )
 
+from .sessions_queries import (
+    generar_query_low_converting_sessions
+)
+
 __all__ = [
     # Cookies
     'generar_query_consentimiento_basico',
@@ -62,5 +66,7 @@ __all__ = [
     'generar_query_tiempo_primera_compra',
     'generar_query_landing_page_attribution',
     'generar_query_adquisicion_usuarios',
-    'generar_query_conversion_mensual'
+    'generar_query_conversion_mensual',
+    # Sessions
+    'generar_query_low_converting_sessions'
 ]
