@@ -38,7 +38,8 @@ from .users_visualizations import (
 
 from .sessions_visualizations import (
     mostrar_low_converting_sessions,
-    mostrar_session_path_analysis
+    mostrar_session_path_analysis,
+    mostrar_hourly_sessions_performance
 )
 
 from .common_charts import (
@@ -79,6 +80,7 @@ __all__ = [
     # Sessions
     'mostrar_low_converting_sessions',
     'mostrar_session_path_analysis',
+    'mostrar_hourly_sessions_performance',
     # Common
     'create_pie_chart',
     'create_bar_chart',
