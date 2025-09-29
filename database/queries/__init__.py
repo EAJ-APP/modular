@@ -26,6 +26,12 @@ from .events_queries import (
     generar_query_metricas_diarias
 )
 
+from .users_queries import (
+    generar_query_retencion_semanal,
+    generar_query_clv_sesiones,
+    generar_query_tiempo_primera_compra
+)
+
 __all__ = [
     # Cookies
     'generar_query_consentimiento_basico',
@@ -46,5 +52,9 @@ __all__ = [
     'generar_query_eventos_resumen',
     'generar_query_eventos_por_fecha',
     'generar_query_parametros_eventos',
-    'generar_query_metricas_diarias'
+    'generar_query_metricas_diarias',
+    # Users
+    'generar_query_retencion_semanal',
+    'generar_query_clv_sesiones',
+    'generar_query_tiempo_primera_compra'
 ]
