@@ -23,7 +23,8 @@ from .events_visualizations import (
     mostrar_eventos_flatten,
     mostrar_eventos_resumen,
     mostrar_eventos_por_fecha,
-    mostrar_parametros_evento
+    mostrar_parametros_evento,
+    mostrar_metricas_diarias
 )
 
 from .common_charts import (
@@ -53,6 +54,7 @@ __all__ = [
     'mostrar_eventos_resumen',
     'mostrar_eventos_por_fecha',
     'mostrar_parametros_evento',
+    'mostrar_metricas_diarias',
     # Common
     'create_pie_chart',
     'create_bar_chart',
