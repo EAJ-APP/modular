@@ -4,6 +4,315 @@ import plotly.express as px
 import plotly.graph_objects as go
 from config.settings import Settings
 
+def mostrar_hourly_sessions_performance(df):
+    """Visualización para Hourly Sessions Ecommerce Performance"""
+    st.subheader("⏰ Rendimiento de Sesiones por Hora")
+    
+    if df.empty:
+        st.warning("No hay datos de rendimiento horario para el rango seleccionado")
+        return
+    
+    # Convertir hora a entero para mejor ordenamiento
+    df['hour_int'] = df['hour'].astype(int)
+    
+    # Métricas generales
+    total_sessions = df['sessions'].sum()
+    total_pageviews = df['pageviews'].sum()
+    total_orders = df['order_sessions'].sum()
+    avg_sessions_per_hour = df['sessions'].mean()
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Sesiones", f"{total_sessions:,}")
+    with col2:
+        st.metric("Total Pageviews", f"{total_pageviews:,}")
+    with col3:
+        st.metric("Total Compras", f"{total_orders:,}")
+    with col4:
+        st.metric("Sesiones/Hora (Avg)", f"{avg_sessions_per_hour:.0f}")
+    
+    # Calcular tasas de conversión por hora
+    df['view_item_rate'] = (df['view_item_sessions'] / df['sessions'] * 100).round(2)
+    df['add_to_cart_rate'] = (df['add_to_cart_sessions'] / df['sessions'] * 100).round(2)
+    df['conversion_rate'] = (df['order_sessions'] / df['sessions'] * 100).round(2)
+    
+    # Agregar por hora del día (promedio de todas las fechas)
+    hourly_avg = df.groupby('hour_int').agg({
+        'sessions': 'mean',
+        'pageviews': 'mean',
+        'view_item_sessions': 'mean',
+        'add_to_cart_sessions': 'mean',
+        'order_sessions': 'mean',
+        'view_item_rate': 'mean',
+        'add_to_cart_rate': 'mean',
+        'conversion_rate': 'mean'
+    }).reset_index()
+    
+    hourly_avg['hour'] = hourly_avg['hour_int'].apply(lambda x: f'{x:02d}:00')
+    
+    # Análisis por hora del día
+    st.subheader("📊 Distribución por Hora del Día")
+    
+    # Gráfico de líneas - Sesiones y eventos por hora
+    fig_hourly = go.Figure()
+    
+    fig_hourly.add_trace(go.Scatter(
+        x=hourly_avg['hour'],
+        y=hourly_avg['sessions'],
+        name='Sesiones',
+        mode='lines+markers',
+        line=dict(color='blue', width=3),
+        yaxis='y'
+    ))
+    
+    fig_hourly.add_trace(go.Scatter(
+        x=hourly_avg['hour'],
+        y=hourly_avg['view_item_sessions'],
+        name='View Item',
+        mode='lines+markers',
+        line=dict(color='green', width=2),
+        yaxis='y'
+    ))
+    
+    fig_hourly.add_trace(go.Scatter(
+        x=hourly_avg['hour'],
+        y=hourly_avg['add_to_cart_sessions'],
+        name='Add to Cart',
+        mode='lines+markers',
+        line=dict(color='orange', width=2),
+        yaxis='y'
+    ))
+    
+    fig_hourly.add_trace(go.Scatter(
+        x=hourly_avg['hour'],
+        y=hourly_avg['order_sessions'],
+        name='Compras',
+        mode='lines+markers',
+        line=dict(color='red', width=2),
+        yaxis='y2'
+    ))
+    
+    fig_hourly.update_layout(
+        title='Actividad por Hora del Día (Promedio)',
+        xaxis_title='Hora del Día',
+        yaxis=dict(title='Sesiones / Eventos'),
+        yaxis2=dict(title='Compras', overlaying='y', side='right'),
+        hovermode='x unified',
+        height=500
+    )
+    
+    st.plotly_chart(fig_hourly, use_container_width=True)
+    
+    # Heatmap de actividad por hora y día de la semana
+    st.subheader("🔥 Heatmap: Actividad por Día y Hora")
+    
+    # Preparar datos para heatmap
+    heatmap_data = df.pivot_table(
+        values='sessions',
+        index='weekday',
+        columns='hour_int',
+        aggfunc='mean'
+    )
+    
+    # Ordenar días de la semana correctamente
+    weekday_order = ['0 - Sunday', '1 - Monday', '2 - Tuesday', '3 - Wednesday', 
+                     '4 - Thursday', '5 - Friday', '6 - Saturday']
+    
+    # Filtrar solo los días que existen en los datos
+    weekday_order = [day for day in weekday_order if day in heatmap_data.index]
+    heatmap_data = heatmap_data.reindex(weekday_order)
+    
+    fig_heatmap = px.imshow(
+        heatmap_data,
+        labels=dict(x="Hora del Día", y="Día de la Semana", color="Sesiones"),
+        title="Sesiones por Día de la Semana y Hora",
+        color_continuous_scale='Blues',
+        aspect="auto"
+    )
+    fig_heatmap.update_xaxes(side="bottom")
+    fig_heatmap.update_layout(height=400)
+    
+    st.plotly_chart(fig_heatmap, use_container_width=True)
+    
+    # Análisis de conversión por hora
+    st.subheader("💰 Tasas de Conversión por Hora")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Gráfico de tasas de conversión
+        fig_conversion = go.Figure()
+        
+        fig_conversion.add_trace(go.Bar(
+            x=hourly_avg['hour'],
+            y=hourly_avg['view_item_rate'],
+            name='View Item Rate',
+            marker_color='lightblue'
+        ))
+        
+        fig_conversion.add_trace(go.Bar(
+            x=hourly_avg['hour'],
+            y=hourly_avg['add_to_cart_rate'],
+            name='Add to Cart Rate',
+            marker_color='lightgreen'
+        ))
+        
+        fig_conversion.add_trace(go.Bar(
+            x=hourly_avg['hour'],
+            y=hourly_avg['conversion_rate'],
+            name='Conversion Rate',
+            marker_color='salmon'
+        ))
+        
+        fig_conversion.update_layout(
+            title='Tasas de Conversión por Hora',
+            xaxis_title='Hora',
+            yaxis_title='Tasa (%)',
+            barmode='group',
+            height=400
+        )
+        
+        st.plotly_chart(fig_conversion, use_container_width=True)
+    
+    with col2:
+        # Scatter: Sesiones vs Conversión
+        fig_scatter = px.scatter(
+            hourly_avg,
+            x='sessions',
+            y='conversion_rate',
+            size='order_sessions',
+            color='hour_int',
+            hover_data=['hour'],
+            title='Volumen vs Conversión por Hora',
+            labels={
+                'sessions': 'Sesiones Promedio',
+                'conversion_rate': 'Tasa Conversión (%)',
+                'order_sessions': 'Compras',
+                'hour_int': 'Hora'
+            },
+            color_continuous_scale='Viridis'
+        )
+        fig_scatter.update_layout(height=400)
+        st.plotly_chart(fig_scatter, use_container_width=True)
+    
+    # Análisis por día de la semana
+    st.subheader("📅 Análisis por Día de la Semana")
+    
+    # Agregar por día de la semana
+    weekday_avg = df.groupby('weekday').agg({
+        'sessions': 'mean',
+        'pageviews': 'mean',
+        'view_item_sessions': 'mean',
+        'add_to_cart_sessions': 'mean',
+        'order_sessions': 'mean',
+        'conversion_rate': 'mean'
+    }).reset_index()
+    
+    # Reordenar días de la semana
+    weekday_avg['weekday_sort'] = weekday_avg['weekday'].str.split(' - ').str[0].astype(int)
+    weekday_avg = weekday_avg.sort_values('weekday_sort')
+    weekday_avg['weekday_name'] = weekday_avg['weekday'].str.split(' - ').str[1]
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Sesiones por día de la semana
+        fig_weekday_sessions = px.bar(
+            weekday_avg,
+            x='weekday_name',
+            y='sessions',
+            title='Sesiones Promedio por Día de la Semana',
+            labels={'sessions': 'Sesiones', 'weekday_name': 'Día'},
+            color='sessions',
+            color_continuous_scale='Blues'
+        )
+        st.plotly_chart(fig_weekday_sessions, use_container_width=True)
+    
+    with col2:
+        # Conversión por día de la semana
+        fig_weekday_conv = px.bar(
+            weekday_avg,
+            x='weekday_name',
+            y='conversion_rate',
+            title='Tasa de Conversión por Día',
+            labels={'conversion_rate': 'Conversión (%)', 'weekday_name': 'Día'},
+            color='conversion_rate',
+            color_continuous_scale='Reds'
+        )
+        st.plotly_chart(fig_weekday_conv, use_container_width=True)
+    
+    # Identificar mejores y peores horas
+    st.subheader("💡 Insights: Mejores y Peores Horas")
+    
+    # Top 5 horas por sesiones
+    top_hours_sessions = hourly_avg.nlargest(5, 'sessions')
+    bottom_hours_sessions = hourly_avg.nsmallest(5, 'sessions')
+    
+    # Top 5 horas por conversión
+    top_hours_conversion = hourly_avg.nlargest(5, 'conversion_rate')
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.write("**🚀 Top 5 Horas (Mayor Tráfico):**")
+        for _, row in top_hours_sessions.iterrows():
+            st.write(f"- **{row['hour']}**: {row['sessions']:.0f} sesiones")
+    
+    with col2:
+        st.write("**😴 Top 5 Horas (Menor Tráfico):**")
+        for _, row in bottom_hours_sessions.iterrows():
+            st.write(f"- **{row['hour']}**: {row['sessions']:.0f} sesiones")
+    
+    with col3:
+        st.write("**💰 Top 5 Horas (Mayor Conversión):**")
+        for _, row in top_hours_conversion.iterrows():
+            st.write(f"- **{row['hour']}**: {row['conversion_rate']:.2f}%")
+    
+    # Tabla detallada
+    st.subheader("📋 Datos Detallados por Hora")
+    
+    display_df = hourly_avg[[
+        'hour', 'sessions', 'pageviews', 'view_item_sessions', 
+        'add_to_cart_sessions', 'order_sessions', 
+        'view_item_rate', 'add_to_cart_rate', 'conversion_rate'
+    ]].copy()
+    
+    st.dataframe(display_df.style.format({
+        'sessions': '{:.0f}',
+        'pageviews': '{:.0f}',
+        'view_item_sessions': '{:.0f}',
+        'add_to_cart_sessions': '{:.0f}',
+        'order_sessions': '{:.0f}',
+        'view_item_rate': '{:.2f}%',
+        'add_to_cart_rate': '{:.2f}%',
+        'conversion_rate': '{:.2f}%'
+    }), use_container_width=True)
+    
+    # Recomendaciones
+    st.subheader("🎯 Recomendaciones")
+    
+    peak_hour = top_hours_sessions.iloc[0]
+    best_conversion_hour = top_hours_conversion.iloc[0]
+    
+    st.info(f"""
+    **Optimización de Horarios:**
+    
+    - 🕐 **Hora pico de tráfico:** {peak_hour['hour']} con {peak_hour['sessions']:.0f} sesiones promedio
+    - 💰 **Mejor hora para conversión:** {best_conversion_hour['hour']} con {best_conversion_hour['conversion_rate']:.2f}% de conversión
+    - 📢 **Recomendación:** Programa campañas de marketing y promociones durante las horas pico
+    - ⚡ **Consejo:** Asegura que el sitio esté optimizado durante las horas de mayor tráfico
+    """)
+    
+    # Botón de descarga
+    if st.button("📥 Descargar Datos CSV", key="download_hourly_performance"):
+        csv = df.to_csv(index=False)
+        st.download_button(
+            label="Descargar CSV",
+            data=csv,
+            file_name="hourly_sessions_performance.csv",
+            mime="text/csv"
+        )
+
 def mostrar_session_path_analysis(df):
     """Visualización para Session Path Analysis"""
     st.subheader("🗺️ Análisis de Rutas de Navegación")
