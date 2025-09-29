@@ -425,24 +425,7 @@ def mostrar_landing_page_attribution(df):
     )
     st.plotly_chart(fig_scatter, use_container_width=True)
     
-    # Análisis de eficiencia
-    st.subheader("⚡ Eficiencia por Landing Page")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Top por tasa de conversión
-        top_conversion = df.nlargest(10, 'conversion_rate')
-        st.write("**Top 10 por Tasa de Conversión:**")
-        for _, row in top_conversion.iterrows():
-            st.write(f"- {row['conversion_rate']:.2f}% - {row['unique_users']} usuarios")
-    
-    with col2:
-        # Top por revenue per user
-        top_rpu = df.nlargest(10, 'revenue_per_user')
-        st.write("**Top 10 por Revenue per User:**")
-        for _, row in top_rpu.iterrows():
-            st.write(f"- €{row['revenue_per_user']:.2f} - {row['unique_users']} usuarios")
+    # SECCIÓN ELIMINADA: Análisis de eficiencia
 
 def mostrar_adquisicion_usuarios(df):
     """Visualización para User Acquisition by Source/Medium"""
@@ -563,24 +546,49 @@ def mostrar_conversion_mensual(df):
     # Ordenar por mes
     df = df.sort_values('month')
     
+    # Convertir el mes a formato datetime para mejor manejo
+    df['month_date'] = pd.to_datetime(df['month'] + '-01')
+    df['month_display'] = df['month_date'].dt.strftime('%B %Y')  # Formato: "Junio 2025"
+    
+    # Cambiar locale para español (intentar, si falla usar inglés)
+    try:
+        import locale
+        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+        df['month_display'] = df['month_date'].dt.strftime('%B %Y')
+    except:
+        # Si falla, usar nombres de meses en español manualmente
+        meses_es = {
+            'January': 'Enero', 'February': 'Febrero', 'March': 'Marzo',
+            'April': 'Abril', 'May': 'Mayo', 'June': 'Junio',
+            'July': 'Julio', 'August': 'Agosto', 'September': 'Septiembre',
+            'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
+        }
+        df['month_display'] = df['month_date'].dt.strftime('%B %Y')
+        for eng, esp in meses_es.items():
+            df['month_display'] = df['month_display'].str.replace(eng, esp)
+    
     # Métricas generales
     avg_conversion = df['conversion_rate'].mean()
-    best_month = df.loc[df['conversion_rate'].idxmax()]
-    worst_month = df.loc[df['conversion_rate'].idxmin()]
+    best_month_row = df.loc[df['conversion_rate'].idxmax()]
+    worst_month_row = df.loc[df['conversion_rate'].idxmin()]
     total_revenue = df['total_revenue'].sum()
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Conversión Promedio", f"{avg_conversion:.2f}%")
     with col2:
-        st.metric("Mejor Mes", f"{best_month['month']}: {best_month['conversion_rate']:.2f}%")
+        st.metric("Mejor Mes", f"{best_month_row['month_display']}: {best_month_row['conversion_rate']:.2f}%")
     with col3:
-        st.metric("Peor Mes", f"{worst_month['month']}: {worst_month['conversion_rate']:.2f}%")
+        st.metric("Peor Mes", f"{worst_month_row['month_display']}: {worst_month_row['conversion_rate']:.2f}%")
     with col4:
         st.metric("Revenue Total", f"€{total_revenue:,.2f}")
     
     # Tabla de datos
-    st.dataframe(df.style.format({
+    display_df = df[['month_display', 'total_users', 'converted_users', 'conversion_rate', 
+                      'total_revenue', 'total_transactions', 'avg_revenue_per_converter', 
+                      'avg_revenue_per_user']].copy()
+    
+    st.dataframe(display_df.style.format({
         'total_users': '{:,}',
         'converted_users': '{:,}',
         'conversion_rate': '{:.2f}%',
@@ -595,7 +603,7 @@ def mostrar_conversion_mensual(df):
     
     fig_conversion = go.Figure()
     fig_conversion.add_trace(go.Scatter(
-        x=df['month'],
+        x=df['month_display'],
         y=df['conversion_rate'],
         mode='lines+markers',
         name='Tasa de Conversión',
@@ -615,13 +623,13 @@ def mostrar_conversion_mensual(df):
     
     fig_users = go.Figure()
     fig_users.add_trace(go.Bar(
-        x=df['month'],
+        x=df['month_display'],
         y=df['total_users'],
         name='Total Usuarios',
         marker_color='lightblue'
     ))
     fig_users.add_trace(go.Bar(
-        x=df['month'],
+        x=df['month_display'],
         y=df['converted_users'],
         name='Usuarios Conversores',
         marker_color='green'
@@ -644,10 +652,10 @@ def mostrar_conversion_mensual(df):
         # Revenue mensual
         fig_revenue = px.line(
             df,
-            x='month',
+            x='month_display',
             y='total_revenue',
             title='Revenue Mensual',
-            labels={'total_revenue': 'Revenue (€)', 'month': 'Mes'},
+            labels={'total_revenue': 'Revenue (€)', 'month_display': 'Mes'},
             markers=True
         )
         fig_revenue.update_layout(xaxis_tickangle=-45)
@@ -657,14 +665,12 @@ def mostrar_conversion_mensual(df):
         # Revenue per user
         fig_rpu = px.line(
             df,
-            x='month',
+            x='month_display',
             y='avg_revenue_per_user',
             title='Revenue Promedio por Usuario',
-            labels={'avg_revenue_per_user': 'Revenue/Usuario (€)', 'month': 'Mes'},
+            labels={'avg_revenue_per_user': 'Revenue/Usuario (€)', 'month_display': 'Mes'},
             markers=True,
             line_shape='spline'
         )
         fig_rpu.update_layout(xaxis_tickangle=-45)
         st.plotly_chart(fig_rpu, use_container_width=True)
-    
-    # Tendencias
