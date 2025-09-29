@@ -36,6 +36,10 @@ from .users_visualizations import (
     mostrar_conversion_mensual
 )
 
+from .sessions_visualizations import (
+    mostrar_low_converting_sessions
+)
+
 from .common_charts import (
     create_pie_chart,
     create_bar_chart,
@@ -71,6 +75,8 @@ __all__ = [
     'mostrar_landing_page_attribution',
     'mostrar_adquisicion_usuarios',
     'mostrar_conversion_mensual',
+    # Sessions
+    'mostrar_low_converting_sessions',
     # Common
     'create_pie_chart',
     'create_bar_chart',
