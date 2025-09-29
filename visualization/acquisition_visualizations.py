@@ -427,29 +427,26 @@ def mostrar_atribucion_completa(df):
             'variability': '{:.3f}'
         }))
     
-    # CORRECCIÓN: Análisis detallado por modelo - Usar session_state para mantener el estado
+    # CORRECCIÓN: Análisis detallado por modelo - SOLUCIÓN DEFINITIVA
     st.subheader("🔍 Análisis Detallado por Modelo")
     
     # Inicializar session_state si no existe
-    if 'selected_model' not in st.session_state:
-        st.session_state.selected_model = df['attribution_model'].unique()[0] if len(df['attribution_model'].unique()) > 0 else ""
+    if 'selected_model_detail' not in st.session_state:
+        st.session_state.selected_model_detail = df['attribution_model'].unique()[0] if len(df['attribution_model'].unique()) > 0 else ""
     
-    # CORRECCIÓN - Usar session_state para mantener el estado
-    if 'selected_model' not in st.session_state:
-        st.session_state.selected_model = df['attribution_model'].unique()[0]
-    
+    # Selector SIN key conflictivo
     selected_model = st.selectbox(
         "Seleccionar modelo para análisis detallado:",
         df['attribution_model'].unique(),
-        key='model_selector'
+        index=0
     )
     
     # Actualizar session_state cuando cambia la selección
-    if selected_model != st.session_state.selected_model:
-        st.session_state.selected_model = selected_model
+    if selected_model != st.session_state.selected_model_detail:
+        st.session_state.selected_model_detail = selected_model
     
-    # Usar siempre el valor de session_state
-    selected_model = st.session_state.selected_model
+    # Usar siempre el modelo del session_state
+    selected_model = st.session_state.selected_model_detail
     
     if selected_model:
         model_data = df[df['attribution_model'] == selected_model].nlargest(15, 'attributed_revenue')
