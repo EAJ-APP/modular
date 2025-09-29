@@ -4,6 +4,283 @@ import plotly.express as px
 import plotly.graph_objects as go
 from config.settings import Settings
 
+def mostrar_session_path_analysis(df):
+    """Visualización para Session Path Analysis"""
+    st.subheader("🗺️ Análisis de Rutas de Navegación")
+    
+    if df.empty:
+        st.warning("No hay datos de rutas de navegación para el rango seleccionado")
+        return
+    
+    # Métricas generales
+    total_paths = len(df)
+    total_sessions = df['session_count'].sum()
+    unique_pages = pd.concat([df['previous_page'], df['current_page'], df['next_page']]).nunique()
+    avg_sessions_per_path = df['session_count'].mean()
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Rutas Únicas", f"{total_paths:,}")
+    with col2:
+        st.metric("Total Sesiones", f"{total_sessions:,}")
+    with col3:
+        st.metric("Páginas Únicas", f"{unique_pages}")
+    with col4:
+        st.metric("Sesiones/Ruta (Avg)", f"{avg_sessions_per_path:.1f}")
+    
+    # Acortar URLs para mejor visualización
+    def shorten_url(url, max_length=40):
+        if pd.isna(url) or url == '(entrance)' or url == '(exit)':
+            return url
+        return url[:max_length] + '...' if len(str(url)) > max_length else url
+    
+    df['previous_page_short'] = df['previous_page'].apply(shorten_url)
+    df['current_page_short'] = df['current_page'].apply(shorten_url)
+    df['next_page_short'] = df['next_page'].apply(shorten_url)
+    
+    # Crear columna de ruta completa
+    df['full_path'] = df['previous_page_short'] + ' → ' + df['current_page_short'] + ' → ' + df['next_page_short']
+    
+    # Mostrar tabla con datos
+    st.subheader("📊 Top Rutas de Navegación")
+    
+    # Opciones de filtrado
+    col1, col2 = st.columns(2)
+    with col1:
+        min_sessions = st.slider(
+            "Mínimo de sesiones por ruta:",
+            min_value=1,
+            max_value=int(df['session_count'].max()),
+            value=10,
+            key="path_min_sessions"
+        )
+    
+    with col2:
+        path_type = st.selectbox(
+            "Filtrar por tipo de ruta:",
+            ["Todas", "Solo entradas (entrance)", "Solo salidas (exit)", "Rutas internas"],
+            key="path_type_filter"
+        )
+    
+    # Aplicar filtros
+    df_filtered = df[df['session_count'] >= min_sessions].copy()
+    
+    if path_type == "Solo entradas (entrance)":
+        df_filtered = df_filtered[df_filtered['previous_page'] == '(entrance)']
+    elif path_type == "Solo salidas (exit)":
+        df_filtered = df_filtered[df_filtered['next_page'] == '(exit)']
+    elif path_type == "Rutas internas":
+        df_filtered = df_filtered[
+            (df_filtered['previous_page'] != '(entrance)') & 
+            (df_filtered['next_page'] != '(exit)')
+        ]
+    
+    # Mostrar tabla
+    st.dataframe(
+        df_filtered[['previous_page', 'current_page', 'next_page', 'session_count']].head(50).style.format({
+            'session_count': '{:,}'
+        }),
+        use_container_width=True,
+        height=400
+    )
+    
+    # Top 20 rutas más comunes
+    st.subheader("🏆 Top 20 Rutas Más Comunes")
+    
+    top_paths = df_filtered.nlargest(20, 'session_count')
+    
+    fig_top_paths = px.bar(
+        top_paths,
+        x='session_count',
+        y='full_path',
+        orientation='h',
+        title='Top 20 Rutas de Navegación',
+        labels={'session_count': 'Sesiones', 'full_path': 'Ruta'},
+        color='session_count',
+        color_continuous_scale='Blues'
+    )
+    fig_top_paths.update_layout(
+        yaxis={'categoryorder': 'total ascending'},
+        height=700,
+        showlegend=False
+    )
+    st.plotly_chart(fig_top_paths, use_container_width=True)
+    
+    # Análisis de páginas de entrada
+    st.subheader("🚪 Análisis de Páginas de Entrada")
+    
+    entrance_pages = df[df['previous_page'] == '(entrance)'].groupby('current_page').agg({
+        'session_count': 'sum'
+    }).reset_index().sort_values('session_count', ascending=False).head(15)
+    
+    entrance_pages['current_page_short'] = entrance_pages['current_page'].apply(shorten_url)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        fig_entrance = px.bar(
+            entrance_pages,
+            x='session_count',
+            y='current_page_short',
+            orientation='h',
+            title='Top 15 Páginas de Entrada',
+            labels={'session_count': 'Sesiones', 'current_page_short': 'Página'},
+            color='session_count',
+            color_continuous_scale='Greens'
+        )
+        fig_entrance.update_layout(yaxis={'categoryorder': 'total ascending'}, height=500)
+        st.plotly_chart(fig_entrance, use_container_width=True)
+    
+    with col2:
+        # Pie chart de distribución
+        fig_entrance_pie = px.pie(
+            entrance_pages.head(10),
+            values='session_count',
+            names='current_page_short',
+            title='Distribución Top 10 Entradas'
+        )
+        st.plotly_chart(fig_entrance_pie, use_container_width=True)
+    
+    # Análisis de páginas de salida
+    st.subheader("🚶 Análisis de Páginas de Salida")
+    
+    exit_pages = df[df['next_page'] == '(exit)'].groupby('current_page').agg({
+        'session_count': 'sum'
+    }).reset_index().sort_values('session_count', ascending=False).head(15)
+    
+    exit_pages['current_page_short'] = exit_pages['current_page'].apply(shorten_url)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        fig_exit = px.bar(
+            exit_pages,
+            x='session_count',
+            y='current_page_short',
+            orientation='h',
+            title='Top 15 Páginas de Salida',
+            labels={'session_count': 'Sesiones', 'current_page_short': 'Página'},
+            color='session_count',
+            color_continuous_scale='Reds'
+        )
+        fig_exit.update_layout(yaxis={'categoryorder': 'total ascending'}, height=500)
+        st.plotly_chart(fig_exit, use_container_width=True)
+    
+    with col2:
+        # Tabla de páginas de salida
+        st.write("**Páginas con Mayor Abandono:**")
+        st.dataframe(
+            exit_pages[['current_page', 'session_count']].head(10).style.format({
+                'session_count': '{:,}'
+            }),
+            use_container_width=True
+        )
+    
+    # Análisis de flujo entre páginas
+    st.subheader("🔄 Flujo de Navegación (Sankey Diagram)")
+    
+    # Preparar datos para Sankey (Top 30 rutas más comunes)
+    sankey_data = df_filtered.nlargest(30, 'session_count')
+    
+    # Crear nodos únicos
+    all_pages = pd.concat([
+        sankey_data['previous_page_short'],
+        sankey_data['current_page_short'],
+        sankey_data['next_page_short']
+    ]).unique()
+    
+    node_dict = {page: idx for idx, page in enumerate(all_pages)}
+    
+    # Crear links para el diagrama
+    source_indices = sankey_data['previous_page_short'].map(node_dict).tolist()
+    target_indices = sankey_data['current_page_short'].map(node_dict).tolist()
+    values = sankey_data['session_count'].tolist()
+    
+    # Segunda parte del flujo (current -> next)
+    source_indices_2 = sankey_data['current_page_short'].map(node_dict).tolist()
+    target_indices_2 = sankey_data['next_page_short'].map(node_dict).tolist()
+    values_2 = sankey_data['session_count'].tolist()
+    
+    # Combinar ambas partes
+    all_sources = source_indices + source_indices_2
+    all_targets = target_indices + target_indices_2
+    all_values = values + values_2
+    
+    # Crear Sankey diagram
+    fig_sankey = go.Figure(data=[go.Sankey(
+        node=dict(
+            pad=15,
+            thickness=20,
+            line=dict(color="black", width=0.5),
+            label=list(all_pages),
+            color="lightblue"
+        ),
+        link=dict(
+            source=all_sources,
+            target=all_targets,
+            value=all_values,
+            color="rgba(0,0,255,0.2)"
+        )
+    )])
+    
+    fig_sankey.update_layout(
+        title="Diagrama de Flujo de Navegación (Top 30 Rutas)",
+        height=600,
+        font=dict(size=10)
+    )
+    
+    st.plotly_chart(fig_sankey, use_container_width=True)
+    
+    # Insights clave
+    st.subheader("💡 Insights Clave")
+    
+    # Calcular métricas de insight
+    entrance_rate = (df[df['previous_page'] == '(entrance)']['session_count'].sum() / total_sessions * 100)
+    exit_rate = (df[df['next_page'] == '(exit)']['session_count'].sum() / total_sessions * 100)
+    
+    top_entrance = entrance_pages.iloc[0] if len(entrance_pages) > 0 else None
+    top_exit = exit_pages.iloc[0] if len(exit_pages) > 0 else None
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("**📍 Páginas de Entrada:**")
+        st.metric("% de Sesiones que Inician", f"{entrance_rate:.1f}%")
+        if top_entrance is not None:
+            st.write(f"**Página más común:** {top_entrance['current_page_short']}")
+            st.write(f"**Sesiones:** {top_entrance['session_count']:,}")
+    
+    with col2:
+        st.write("**🚪 Páginas de Salida:**")
+        st.metric("% de Sesiones que Terminan", f"{exit_rate:.1f}%")
+        if top_exit is not None:
+            st.write(f"**Página más común:** {top_exit['current_page_short']}")
+            st.write(f"**Sesiones:** {top_exit['session_count']:,}")
+    
+    # Rutas críticas
+    st.write("**🎯 Rutas Críticas para Optimización:**")
+    
+    # Rutas con alta salida después de página actual
+    critical_exits = df[
+        (df['next_page'] == '(exit)') & 
+        (df['previous_page'] != '(entrance)')
+    ].nlargest(5, 'session_count')
+    
+    if not critical_exits.empty:
+        st.write("*Usuarios que abandonan después de estas secuencias:*")
+        for _, row in critical_exits.iterrows():
+            st.write(f"- **{shorten_url(row['previous_page'])}** → **{shorten_url(row['current_page'])}** → (salida): {row['session_count']:,} sesiones")
+    
+    # Botón de descarga
+    if st.button("📥 Descargar Datos CSV", key="download_session_paths"):
+        csv = df.to_csv(index=False)
+        st.download_button(
+            label="Descargar CSV",
+            data=csv,
+            file_name="session_path_analysis.csv",
+            mime="text/csv"
+        )
+
 def mostrar_low_converting_sessions(df):
     """Visualización para Low Converting Sessions Analysis"""
     st.subheader("🔍 Análisis de Sesiones con Baja Conversión")
