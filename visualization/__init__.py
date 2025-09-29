@@ -30,7 +30,10 @@ from .events_visualizations import (
 from .users_visualizations import (
     mostrar_retencion_semanal,
     mostrar_clv_sesiones,
-    mostrar_tiempo_primera_compra
+    mostrar_tiempo_primera_compra,
+    mostrar_landing_page_attribution,
+    mostrar_adquisicion_usuarios,
+    mostrar_conversion_mensual
 )
 
 from .common_charts import (
@@ -65,6 +68,9 @@ __all__ = [
     'mostrar_retencion_semanal',
     'mostrar_clv_sesiones',
     'mostrar_tiempo_primera_compra',
+    'mostrar_landing_page_attribution',
+    'mostrar_adquisicion_usuarios',
+    'mostrar_conversion_mensual',
     # Common
     'create_pie_chart',
     'create_bar_chart',
