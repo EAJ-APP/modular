@@ -16,7 +16,8 @@ try:
         show_ecommerce_tab, 
         show_acquisition_tab,
         show_events_tab,
-        show_users_tab
+        show_users_tab,
+        show_sessions_tab
     )
     st.sidebar.success("✅ Módulos importados correctamente")
     
@@ -79,6 +80,8 @@ def main():
                 show_events_tab(client, selected_project, selected_dataset, start_date, end_date)
             elif tab_id == "users":
                 show_users_tab(client, selected_project, selected_dataset, start_date, end_date)
+            elif tab_id == "sessions":
+                show_sessions_tab(client, selected_project, selected_dataset, start_date, end_date)
             else:
                 st.info(f"🔧 Sección en desarrollo. Próximamente: consultas para {tab_id}")
 
