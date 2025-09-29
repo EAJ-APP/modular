@@ -321,6 +321,7 @@ def mostrar_tiempo_primera_compra(df):
         st.write("**🐌 Fuentes Lentas (> 30 días):**")
         st.write(f"- {len(slow_sources)} fuentes")
         st.write(f"- {slow_sources['users_with_purchase'].sum():,} compradores")
+
 def mostrar_landing_page_attribution(df):
     """Visualización para First Landing Page Attribution"""
     st.subheader("🎯 Atribución por Primera Landing Page")
@@ -667,20 +668,3 @@ def mostrar_conversion_mensual(df):
         st.plotly_chart(fig_rpu, use_container_width=True)
     
     # Tendencias
-    st.subheader("📊 Análisis de Tendencias")
-    
-    if len(df) >= 3:
-        recent_3_months = df.tail(3)['conversion_rate'].mean()
-        first_3_months = df.head(3)['conversion_rate'].mean()
-        trend = recent_3_months - first_3_months
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric(
-                "Tendencia de Conversión",
-                f"{trend:+.2f}%",
-                delta=f"{'📈 Mejorando' if trend > 0 else '📉 Decreciendo'}"
-            )
-        with col2:
-            st.write(f"**Primeros 3 meses:** {first_3_months:.2f}%")
-            st.write(f"**Últimos 3 meses:** {recent_3_months:.2f}%")
