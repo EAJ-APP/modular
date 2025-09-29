@@ -316,8 +316,8 @@ def mostrar_atribucion_multimodelo(df):
             }))
 
 def mostrar_atribucion_completa(df):
-    """Visualización para análisis de atribución completa (6 modelos)"""
-    st.subheader("🎯 Atribución Multi-Modelo Completa (6 Modelos)")
+    """Visualización para análisis de atribución completa (7 modelos)"""
+    st.subheader("🎯 Atribución Multi-Modelo Completa (7 Modelos)")
     
     if df.empty:
         st.warning("No hay datos de atribución completa para el rango seleccionado")
@@ -326,11 +326,12 @@ def mostrar_atribucion_completa(df):
     # Información sobre los modelos
     with st.expander("📚 Información sobre los Modelos de Atribución", expanded=False):
         st.markdown("""
-        **6 Modelos Implementados:**
+        **7 Modelos Implementados:**
         
         - **🎯 Last Click**: Atribuye el 100% al último touchpoint antes de la conversión
         - **🚀 First Click**: Atribuye el 100% al primer touchpoint del usuario
         - **📊 Linear**: Distribuye equitativamente entre todos los touchpoints
+        - **⏰ Time Decay**: Mayor peso a los touchpoints más recientes
         - **⚖️ Position Based**: 40% primer click, 40% último click, 20% intermedios
         - **🔍 Last Non-Direct**: Como Last Click pero ignora tráfico directo
         - **🤖 Data Driven**: Combinación algorítmica de múltiples factores
@@ -342,7 +343,7 @@ def mostrar_atribucion_completa(df):
     total_models = df['attribution_model'].nunique()
     total_channels = df['utm_source'].nunique()
     
-    # CORRECCIÓN: No dividir por total_models, usar valores únicos por modelo
+    # Calcular valores únicos por modelo
     model_summary = df.groupby('attribution_model').agg({
         'attributed_revenue': 'sum',
         'attributed_conversions': 'sum'
@@ -427,34 +428,23 @@ def mostrar_atribucion_completa(df):
             'variability': '{:.3f}'
         }))
     
-    # SOLUCIÓN DEFINITIVA: Usar un container y manejo específico del estado
+    # SOLUCIÓN CORREGIDA: Eliminar el rerun innecesario
     st.subheader("🔍 Análisis Detallado por Modelo")
     
-    # Inicializar session_state si no existe - con un key único para esta función
-    session_key = 'attribucion_completa_selected_model'
-    if session_key not in st.session_state:
-        st.session_state[session_key] = df['attribution_model'].unique()[0] if len(df['attribution_model'].unique()) > 0 else ""
+    # Inicializar session_state si no existe
+    if 'attribucion_completa_selected_model' not in st.session_state:
+        st.session_state['attribucion_completa_selected_model'] = df['attribution_model'].unique()[0] if len(df['attribution_model'].unique()) > 0 else ""
     
-    # Usar un container para aislar el componente
-    with st.container():
-        # Obtener el índice actual para mantener la selección
-        current_options = list(df['attribution_model'].unique())
-        current_index = current_options.index(st.session_state[session_key]) if st.session_state[session_key] in current_options else 0
-        
-        selected_model = st.selectbox(
-            "Seleccionar modelo para análisis detallado:",
-            options=current_options,
-            index=current_index,
-            key="attribution_model_detailed_selector"
-        )
-        
-        # Actualizar session_state y forzar rerun si cambia
-        if selected_model != st.session_state[session_key]:
-            st.session_state[session_key] = selected_model
-            st.rerun()
+    # Selectbox simple que actualiza automáticamente el session_state
+    selected_model = st.selectbox(
+        "Seleccionar modelo para análisis detallado:",
+        options=list(df['attribution_model'].unique()),
+        index=list(df['attribution_model'].unique()).index(st.session_state['attribucion_completa_selected_model']) if st.session_state['attribucion_completa_selected_model'] in df['attribution_model'].unique() else 0,
+        key="attribution_model_detailed_selector"
+    )
     
-    # Usar siempre el modelo del session_state
-    selected_model = st.session_state[session_key]
+    # Actualizar session_state sin rerun
+    st.session_state['attribucion_completa_selected_model'] = selected_model
     
     if selected_model:
         model_data = df[df['attribution_model'] == selected_model].nlargest(15, 'attributed_revenue')
