@@ -2,12 +2,14 @@ import streamlit as st
 from database.queries.sessions_queries import (
     generar_query_low_converting_sessions,
     generar_query_session_path_analysis,
-    generar_query_hourly_sessions_performance
+    generar_query_hourly_sessions_performance,
+    generar_query_exit_pages
 )
 from visualization.sessions_visualizations import (
     mostrar_low_converting_sessions,
     mostrar_session_path_analysis,
-    mostrar_hourly_sessions_performance
+    mostrar_hourly_sessions_performance,
+    mostrar_exit_pages_analysis
 )
 from database.connection import run_query
 
@@ -29,6 +31,11 @@ def show_sessions_tab(client, project, dataset, start_date, end_date):
         st.session_state.sessions_hourly_data = None
     if 'sessions_hourly_show' not in st.session_state:
         st.session_state.sessions_hourly_show = False
+    
+    if 'sessions_exit_data' not in st.session_state:
+        st.session_state.sessions_exit_data = None
+    if 'sessions_exit_show' not in st.session_state:
+        st.session_state.sessions_exit_show = False
     
     # Sección 1: Low Converting Sessions Analysis
     with st.expander("🔍 Análisis de Sesiones con Baja Conversión", expanded=st.session_state.sessions_low_converting_show):
@@ -91,6 +98,40 @@ def show_sessions_tab(client, project, dataset, start_date, end_date):
             with st.spinner("Analizando rendimiento por hora (esto puede tardar)..."):
                 query = generar_query_hourly_sessions_performance(project, dataset, start_date, end_date)
                 df = run_query(client, query)
+                st.session_state.sessions_hourly_data = df
+                st.session_state.sessions_hourly_show = True
+        
+        # Mostrar resultados si existen
+        if st.session_state.sessions_hourly_show and st.session_state.sessions_hourly_data is not None:
+            mostrar_hourly_sessions_performance(st.session_state.sessions_hourly_data)
+    
+    # Sección 4: Exit Pages Analysis
+    with st.expander("🚪 Análisis de Páginas de Salida", expanded=st.session_state.sessions_exit_show):
+        st.info("""
+        **Identifica las páginas donde los usuarios abandonan:**
+        - Top páginas con mayor tasa de abandono
+        - Porcentaje de salidas por página
+        - Análisis de concentración (Pareto)
+        - Patrones de URL en páginas de salida
+        - Distribución por secciones del sitio
+        - Páginas críticas que requieren optimización
+        - Recomendaciones accionables para reducir abandonos
+        """)
+        
+        if st.button("Analizar Páginas de Salida", key="btn_sessions_exit"):
+            with st.spinner("Analizando páginas de salida..."):
+                query = generar_query_exit_pages(project, dataset, start_date, end_date)
+                df = run_query(client, query)
+                st.session_state.sessions_exit_data = df
+                st.session_state.sessions_exit_show = True
+        
+        # Mostrar resultados si existen
+        if st.session_state.sessions_exit_show and st.session_state.sessions_exit_data is not None:
+            mostrar_exit_pages_analysis(st.session_state.sessions_exit_data)
+    
+    # Mensaje de completado
+    st.success("✅ **Todas las consultas de Sesiones están disponibles!**")
+
                 st.session_state.sessions_hourly_data = df
                 st.session_state.sessions_hourly_show = True
         
