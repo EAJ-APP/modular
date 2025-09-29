@@ -2,12 +2,18 @@ import streamlit as st
 from database.queries.users_queries import (
     generar_query_retencion_semanal,
     generar_query_clv_sesiones,
-    generar_query_tiempo_primera_compra
+    generar_query_tiempo_primera_compra,
+    generar_query_landing_page_attribution,
+    generar_query_adquisicion_usuarios,
+    generar_query_conversion_mensual
 )
 from visualization.users_visualizations import (
     mostrar_retencion_semanal,
     mostrar_clv_sesiones,
-    mostrar_tiempo_primera_compra
+    mostrar_tiempo_primera_compra,
+    mostrar_landing_page_attribution,
+    mostrar_adquisicion_usuarios,
+    mostrar_conversion_mensual
 )
 from database.connection import run_query
 
@@ -29,6 +35,21 @@ def show_users_tab(client, project, dataset, start_date, end_date):
         st.session_state.users_time_purchase_data = None
     if 'users_time_purchase_show' not in st.session_state:
         st.session_state.users_time_purchase_show = False
+    
+    if 'users_landing_data' not in st.session_state:
+        st.session_state.users_landing_data = None
+    if 'users_landing_show' not in st.session_state:
+        st.session_state.users_landing_show = False
+    
+    if 'users_acquisition_data' not in st.session_state:
+        st.session_state.users_acquisition_data = None
+    if 'users_acquisition_show' not in st.session_state:
+        st.session_state.users_acquisition_show = False
+    
+    if 'users_monthly_conv_data' not in st.session_state:
+        st.session_state.users_monthly_conv_data = None
+    if 'users_monthly_conv_show' not in st.session_state:
+        st.session_state.users_monthly_conv_show = False
     
     # Sección 1: Retención Semanal
     with st.expander("📅 Retención Semanal de Usuarios", expanded=st.session_state.users_retention_show):
@@ -91,3 +112,66 @@ def show_users_tab(client, project, dataset, start_date, end_date):
         # Mostrar resultados si existen
         if st.session_state.users_time_purchase_show and st.session_state.users_time_purchase_data is not None:
             mostrar_tiempo_primera_compra(st.session_state.users_time_purchase_data)
+    
+    # Sección 4: Landing Page Attribution
+    with st.expander("🎯 Atribución por Primera Landing Page", expanded=st.session_state.users_landing_show):
+        st.info("""
+        **Análisis de primera landing page:**
+        - Atribuye eventos clave a la primera página visitada
+        - Métricas: views, add-to-cart, purchases, revenue
+        - Identifica páginas de entrada más efectivas
+        - Optimiza inversión en ads por landing page
+        """)
+        
+        if st.button("Analizar Landing Pages", key="btn_users_landing"):
+            with st.spinner("Calculando atribución por landing page..."):
+                query = generar_query_landing_page_attribution(project, dataset, start_date, end_date)
+                df = run_query(client, query)
+                st.session_state.users_landing_data = df
+                st.session_state.users_landing_show = True
+        
+        # Mostrar resultados si existen
+        if st.session_state.users_landing_show and st.session_state.users_landing_data is not None:
+            mostrar_landing_page_attribution(st.session_state.users_landing_data)
+    
+    # Sección 5: Adquisición de Usuarios
+    with st.expander("📍 Adquisición de Usuarios por Fuente/Medio", expanded=st.session_state.users_acquisition_show):
+        st.info("""
+        **Análisis de canales de adquisición:**
+        - Agrupa usuarios por fuente y medio
+        - Channel grouping automático (Organic Search, Paid Social, etc.)
+        - Métricas de performance por canal
+        - Identifica mejores fuentes de usuarios
+        """)
+        
+        if st.button("Analizar Adquisición", key="btn_users_acquisition"):
+            with st.spinner("Calculando adquisición de usuarios..."):
+                query = generar_query_adquisicion_usuarios(project, dataset, start_date, end_date)
+                df = run_query(client, query)
+                st.session_state.users_acquisition_data = df
+                st.session_state.users_acquisition_show = True
+        
+        # Mostrar resultados si existen
+        if st.session_state.users_acquisition_show and st.session_state.users_acquisition_data is not None:
+            mostrar_adquisicion_usuarios(st.session_state.users_acquisition_data)
+    
+    # Sección 6: Conversión Mensual
+    with st.expander("📅 Tasa de Conversión Mensual", expanded=st.session_state.users_monthly_conv_show):
+        st.info("""
+        **Análisis de conversión temporal:**
+        - Tasa de conversión mes a mes
+        - Tendencias estacionales
+        - Revenue per user mensual
+        - Identifica mejores y peores meses
+        """)
+        
+        if st.button("Analizar Conversión Mensual", key="btn_users_monthly_conv"):
+            with st.spinner("Calculando conversión mensual..."):
+                query = generar_query_conversion_mensual(project, dataset, start_date, end_date)
+                df = run_query(client, query)
+                st.session_state.users_monthly_conv_data = df
+                st.session_state.users_monthly_conv_show = True
+        
+        # Mostrar resultados si existen
+        if st.session_state.users_monthly_conv_show and st.session_state.users_monthly_conv_data is not None:
+            mostrar_conversion_mensual(st.session_state.users_monthly_conv_data)
