@@ -44,16 +44,25 @@ def mostrar_eventos_flatten(df):
         st.write("- Items (item_*)")
         st.write("- Otros campos de GA4")
     
-    # Selector de eventos para filtrar
+    # Selector de eventos para filtrar - CON SESSION STATE
     st.subheader("🔍 Explorador de Datos")
     
     if 'event_name' in df.columns:
+        # Inicializar session_state
+        if 'evento_flatten_selected' not in st.session_state:
+            st.session_state.evento_flatten_selected = 'Todos'
+        
         eventos_disponibles = ['Todos'] + sorted(df['event_name'].unique().tolist())
+        
         evento_seleccionado = st.selectbox(
             "Filtrar por tipo de evento:",
             eventos_disponibles,
+            index=eventos_disponibles.index(st.session_state.evento_flatten_selected) if st.session_state.evento_flatten_selected in eventos_disponibles else 0,
             key="evento_flatten_selector"
         )
+        
+        # Actualizar session_state
+        st.session_state.evento_flatten_selected = evento_seleccionado
         
         if evento_seleccionado != 'Todos':
             df_filtrado = df[df['event_name'] == evento_seleccionado]
@@ -171,14 +180,22 @@ def mostrar_eventos_por_fecha(df):
     df['event_date'] = pd.to_datetime(df['event_date'], format='%Y%m%d')
     df['fecha_formateada'] = df['event_date'].dt.strftime('%d/%m/%Y')
     
+    # Inicializar session_state para el multiselect
+    if 'eventos_fecha_selected' not in st.session_state:
+        st.session_state.eventos_fecha_selected = ['Todos']
+    
     # Selector de eventos para filtrar
     eventos_disponibles = ['Todos'] + sorted(df['event_name'].unique().tolist())
+    
     eventos_seleccionados = st.multiselect(
         "Seleccionar eventos a visualizar:",
         eventos_disponibles,
-        default=['Todos'],
-        key="eventos_fecha_selector"
+        default=st.session_state.eventos_fecha_selected,
+        key="eventos_fecha_multiselect"
     )
+    
+    # Actualizar session_state
+    st.session_state.eventos_fecha_selected = eventos_seleccionados if eventos_seleccionados else ['Todos']
     
     if 'Todos' not in eventos_seleccionados and len(eventos_seleccionados) > 0:
         df_filtrado = df[df['event_name'].isin(eventos_seleccionados)]
