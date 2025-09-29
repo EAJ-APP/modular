@@ -38,7 +38,8 @@ from .users_queries import (
 from .sessions_queries import (
     generar_query_low_converting_sessions,
     generar_query_session_path_analysis,
-    generar_query_hourly_sessions_performance
+    generar_query_hourly_sessions_performance,
+    generar_query_exit_pages
 )
 
 __all__ = [
@@ -72,5 +73,6 @@ __all__ = [
     # Sessions
     'generar_query_low_converting_sessions',
     'generar_query_session_path_analysis',
-    'generar_query_hourly_sessions_performance'
+    'generar_query_hourly_sessions_performance',
+    'generar_query_exit_pages'
 ]
