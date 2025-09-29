@@ -9,7 +9,14 @@ try:
     from config.settings import Settings
     from utils import setup_environment, check_dependencies
     from database.connection import get_bq_client
-    from ui import render_sidebar, get_project_dataset_selection, show_cookies_tab, show_ecommerce_tab, show_acquisition_tab
+    from ui import (
+        render_sidebar, 
+        get_project_dataset_selection, 
+        show_cookies_tab, 
+        show_ecommerce_tab, 
+        show_acquisition_tab,
+        show_events_tab
+    )
     st.sidebar.success("✅ Módulos importados correctamente")
     
 except ImportError as e:
@@ -45,7 +52,7 @@ def main():
         st.error(f"Error al cargar proyectos y datasets: {e}")
         return
 
-    # Tabs principales - DEFINIR FUERA DE CUALQUIER BLOQUE TRY/EXCEPT
+    # Tabs principales
     tab_titles = [
         "🍪 Cookies y Privacidad",
         "🛒 Ecommerce", 
@@ -67,6 +74,8 @@ def main():
                 show_ecommerce_tab(client, selected_project, selected_dataset, start_date, end_date)
             elif tab_id == "acquisition":
                 show_acquisition_tab(client, selected_project, selected_dataset, start_date, end_date)
+            elif tab_id == "events":
+                show_events_tab(client, selected_project, selected_dataset, start_date, end_date)
             else:
                 st.info(f"🔧 Sección en desarrollo. Próximamente: consultas para {tab_id}")
 
