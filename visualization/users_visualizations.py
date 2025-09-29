@@ -321,3 +321,366 @@ def mostrar_tiempo_primera_compra(df):
         st.write("**🐌 Fuentes Lentas (> 30 días):**")
         st.write(f"- {len(slow_sources)} fuentes")
         st.write(f"- {slow_sources['users_with_purchase'].sum():,} compradores")
+def mostrar_landing_page_attribution(df):
+    """Visualización para First Landing Page Attribution"""
+    st.subheader("🎯 Atribución por Primera Landing Page")
+    
+    if df.empty:
+        st.warning("No hay datos de landing pages para el rango seleccionado")
+        return
+    
+    # Métricas generales
+    total_users = df['unique_users'].sum()
+    total_revenue = df['total_revenue'].sum()
+    total_purchases = df['total_purchases'].sum()
+    top_page = df.iloc[0] if len(df) > 0 else None
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Usuarios", f"{total_users:,}")
+    with col2:
+        st.metric("Total Compras", f"{total_purchases:,}")
+    with col3:
+        st.metric("Revenue Total", f"€{total_revenue:,.2f}")
+    with col4:
+        if top_page is not None:
+            st.metric("Top Landing Page", f"{top_page['unique_users']:,} usuarios")
+    
+    # Tabla de datos
+    st.dataframe(df.style.format({
+        'unique_users': '{:,}',
+        'total_page_views': '{:,}',
+        'total_view_items': '{:,}',
+        'total_add_to_cart': '{:,}',
+        'total_begin_checkout': '{:,}',
+        'total_purchases': '{:,}',
+        'total_revenue': '€{:,.2f}',
+        'conversion_rate': '{:.2f}%',
+        'revenue_per_user': '€{:.2f}'
+    }))
+    
+    # Top 10 Landing Pages por Revenue
+    st.subheader("💰 Top 10 Landing Pages por Revenue")
+    
+    top_10_revenue = df.head(10)
+    
+    fig_revenue = px.bar(
+        top_10_revenue,
+        x='total_revenue',
+        y='first_landing_page',
+        orientation='h',
+        color='conversion_rate',
+        title='Top 10 Landing Pages por Revenue',
+        labels={
+            'total_revenue': 'Revenue Total (€)',
+            'first_landing_page': 'Landing Page',
+            'conversion_rate': 'Tasa Conversión (%)'
+        },
+        color_continuous_scale='Viridis'
+    )
+    fig_revenue.update_layout(yaxis={'categoryorder': 'total ascending'}, height=500)
+    st.plotly_chart(fig_revenue, use_container_width=True)
+    
+    # Funnel de conversión promedio
+    st.subheader("📊 Funnel de Conversión Agregado")
+    
+    funnel_data = {
+        'Etapa': ['Page Views', 'View Items', 'Add to Cart', 'Begin Checkout', 'Purchases'],
+        'Total': [
+            df['total_page_views'].sum(),
+            df['total_view_items'].sum(),
+            df['total_add_to_cart'].sum(),
+            df['total_begin_checkout'].sum(),
+            df['total_purchases'].sum()
+        ]
+    }
+    
+    fig_funnel = go.Figure(go.Funnel(
+        y=funnel_data['Etapa'],
+        x=funnel_data['Total'],
+        textinfo="value+percent initial"
+    ))
+    fig_funnel.update_layout(title='Funnel Agregado de Todas las Landing Pages')
+    st.plotly_chart(fig_funnel, use_container_width=True)
+    
+    # Scatter: Usuarios vs Revenue
+    st.subheader("📈 Relación: Volumen de Usuarios vs Revenue")
+    
+    fig_scatter = px.scatter(
+        df.head(30),
+        x='unique_users',
+        y='total_revenue',
+        size='total_purchases',
+        color='conversion_rate',
+        hover_name='first_landing_page',
+        title='Usuarios vs Revenue por Landing Page',
+        labels={
+            'unique_users': 'Usuarios Únicos',
+            'total_revenue': 'Revenue Total (€)',
+            'total_purchases': 'Compras',
+            'conversion_rate': 'Conversión (%)'
+        },
+        color_continuous_scale='RdYlGn'
+    )
+    st.plotly_chart(fig_scatter, use_container_width=True)
+    
+    # Análisis de eficiencia
+    st.subheader("⚡ Eficiencia por Landing Page")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Top por tasa de conversión
+        top_conversion = df.nlargest(10, 'conversion_rate')
+        st.write("**Top 10 por Tasa de Conversión:**")
+        for _, row in top_conversion.iterrows():
+            st.write(f"- {row['conversion_rate']:.2f}% - {row['unique_users']} usuarios")
+    
+    with col2:
+        # Top por revenue per user
+        top_rpu = df.nlargest(10, 'revenue_per_user')
+        st.write("**Top 10 por Revenue per User:**")
+        for _, row in top_rpu.iterrows():
+            st.write(f"- €{row['revenue_per_user']:.2f} - {row['unique_users']} usuarios")
+
+def mostrar_adquisicion_usuarios(df):
+    """Visualización para User Acquisition by Source/Medium"""
+    st.subheader("📍 Adquisición de Usuarios por Fuente y Medio")
+    
+    if df.empty:
+        st.warning("No hay datos de adquisición para el rango seleccionado")
+        return
+    
+    # Métricas generales
+    total_users = df['total_users'].sum()
+    total_revenue = df['total_revenue'].sum()
+    overall_conversion = (df['total_purchases'].sum() / total_users * 100) if total_users > 0 else 0
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Usuarios", f"{total_users:,}")
+    with col2:
+        st.metric("Sesiones Totales", f"{df['total_sessions'].sum():,}")
+    with col3:
+        st.metric("Revenue Total", f"€{total_revenue:,.2f}")
+    with col4:
+        st.metric("Conversión Global", f"{overall_conversion:.2f}%")
+    
+    # Tabla de datos
+    st.dataframe(df.style.format({
+        'total_users': '{:,}',
+        'total_sessions': '{:,}',
+        'total_purchases': '{:,}',
+        'total_revenue': '€{:,.2f}',
+        'avg_sessions_per_user': '{:.2f}',
+        'conversion_rate': '{:.2f}%',
+        'revenue_per_user': '€{:.2f}'
+    }))
+    
+    # Análisis por Channel Group
+    st.subheader("🎯 Performance por Channel Group")
+    
+    channel_stats = df.groupby('channel_group').agg({
+        'total_users': 'sum',
+        'total_revenue': 'sum',
+        'total_purchases': 'sum'
+    }).reset_index().sort_values('total_users', ascending=False)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Distribución de usuarios por canal
+        fig_pie = px.pie(
+            channel_stats,
+            values='total_users',
+            names='channel_group',
+            title='Distribución de Usuarios por Canal',
+            color_discrete_sequence=px.colors.qualitative.Set3
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
+    
+    with col2:
+        # Revenue por canal
+        fig_channel_revenue = px.bar(
+            channel_stats,
+            x='channel_group',
+            y='total_revenue',
+            title='Revenue por Channel Group',
+            labels={'total_revenue': 'Revenue (€)', 'channel_group': 'Canal'},
+            color='total_revenue',
+            color_continuous_scale='Greens'
+        )
+        st.plotly_chart(fig_channel_revenue, use_container_width=True)
+    
+    # Top fuentes
+    st.subheader("🏆 Top Fuentes de Adquisición")
+    
+    top_sources = df.nlargest(15, 'total_users')
+    
+    fig_sources = px.bar(
+        top_sources,
+        x='total_users',
+        y='first_source',
+        orientation='h',
+        color='channel_group',
+        title='Top 15 Fuentes por Volumen de Usuarios',
+        labels={'total_users': 'Usuarios', 'first_source': 'Fuente'},
+        hover_data=['first_medium', 'conversion_rate', 'revenue_per_user']
+    )
+    fig_sources.update_layout(yaxis={'categoryorder': 'total ascending'}, height=600)
+    st.plotly_chart(fig_sources, use_container_width=True)
+    
+    # Scatter: Volumen vs Calidad
+    st.subheader("💎 Análisis de Volumen vs Calidad")
+    
+    fig_quality = px.scatter(
+        df.head(50),
+        x='total_users',
+        y='revenue_per_user',
+        size='total_revenue',
+        color='channel_group',
+        hover_name='first_source',
+        title='Volumen de Usuarios vs Revenue per User',
+        labels={
+            'total_users': 'Total Usuarios',
+            'revenue_per_user': 'Revenue per User (€)',
+            'total_revenue': 'Revenue Total',
+            'channel_group': 'Canal'
+        },
+        size_max=40
+    )
+    st.plotly_chart(fig_quality, use_container_width=True)
+
+def mostrar_conversion_mensual(df):
+    """Visualización para Monthly User Conversion Rate"""
+    st.subheader("📅 Tasa de Conversión Mensual de Usuarios")
+    
+    if df.empty:
+        st.warning("No hay datos de conversión mensual para el rango seleccionado")
+        return
+    
+    # Ordenar por mes
+    df = df.sort_values('month')
+    
+    # Métricas generales
+    avg_conversion = df['conversion_rate'].mean()
+    best_month = df.loc[df['conversion_rate'].idxmax()]
+    worst_month = df.loc[df['conversion_rate'].idxmin()]
+    total_revenue = df['total_revenue'].sum()
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Conversión Promedio", f"{avg_conversion:.2f}%")
+    with col2:
+        st.metric("Mejor Mes", f"{best_month['month']}: {best_month['conversion_rate']:.2f}%")
+    with col3:
+        st.metric("Peor Mes", f"{worst_month['month']}: {worst_month['conversion_rate']:.2f}%")
+    with col4:
+        st.metric("Revenue Total", f"€{total_revenue:,.2f}")
+    
+    # Tabla de datos
+    st.dataframe(df.style.format({
+        'total_users': '{:,}',
+        'converted_users': '{:,}',
+        'conversion_rate': '{:.2f}%',
+        'total_revenue': '€{:,.2f}',
+        'total_transactions': '{:,}',
+        'avg_revenue_per_converter': '€{:.2f}',
+        'avg_revenue_per_user': '€{:.2f}'
+    }))
+    
+    # Gráfico de evolución de conversión
+    st.subheader("📈 Evolución de la Tasa de Conversión")
+    
+    fig_conversion = go.Figure()
+    fig_conversion.add_trace(go.Scatter(
+        x=df['month'],
+        y=df['conversion_rate'],
+        mode='lines+markers',
+        name='Tasa de Conversión',
+        line=dict(color='blue', width=3),
+        marker=dict(size=10)
+    ))
+    fig_conversion.update_layout(
+        title='Evolución de la Tasa de Conversión Mensual',
+        xaxis_title='Mes',
+        yaxis_title='Tasa de Conversión (%)',
+        xaxis_tickangle=-45
+    )
+    st.plotly_chart(fig_conversion, use_container_width=True)
+    
+    # Comparativa: Usuarios vs Conversores
+    st.subheader("👥 Usuarios Totales vs Conversores")
+    
+    fig_users = go.Figure()
+    fig_users.add_trace(go.Bar(
+        x=df['month'],
+        y=df['total_users'],
+        name='Total Usuarios',
+        marker_color='lightblue'
+    ))
+    fig_users.add_trace(go.Bar(
+        x=df['month'],
+        y=df['converted_users'],
+        name='Usuarios Conversores',
+        marker_color='green'
+    ))
+    fig_users.update_layout(
+        title='Comparativa Mensual: Total Usuarios vs Conversores',
+        xaxis_title='Mes',
+        yaxis_title='Usuarios',
+        barmode='group',
+        xaxis_tickangle=-45
+    )
+    st.plotly_chart(fig_users, use_container_width=True)
+    
+    # Revenue analysis
+    st.subheader("💰 Análisis de Revenue")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Revenue mensual
+        fig_revenue = px.line(
+            df,
+            x='month',
+            y='total_revenue',
+            title='Revenue Mensual',
+            labels={'total_revenue': 'Revenue (€)', 'month': 'Mes'},
+            markers=True
+        )
+        fig_revenue.update_layout(xaxis_tickangle=-45)
+        st.plotly_chart(fig_revenue, use_container_width=True)
+    
+    with col2:
+        # Revenue per user
+        fig_rpu = px.line(
+            df,
+            x='month',
+            y='avg_revenue_per_user',
+            title='Revenue Promedio por Usuario',
+            labels={'avg_revenue_per_user': 'Revenue/Usuario (€)', 'month': 'Mes'},
+            markers=True,
+            line_shape='spline'
+        )
+        fig_rpu.update_layout(xaxis_tickangle=-45)
+        st.plotly_chart(fig_rpu, use_container_width=True)
+    
+    # Tendencias
+    st.subheader("📊 Análisis de Tendencias")
+    
+    if len(df) >= 3:
+        recent_3_months = df.tail(3)['conversion_rate'].mean()
+        first_3_months = df.head(3)['conversion_rate'].mean()
+        trend = recent_3_months - first_3_months
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric(
+                "Tendencia de Conversión",
+                f"{trend:+.2f}%",
+                delta=f"{'📈 Mejorando' if trend > 0 else '📉 Decreciendo'}"
+            )
+        with col2:
+            st.write(f"**Primeros 3 meses:** {first_3_months:.2f}%")
+            st.write(f"**Últimos 3 meses:** {recent_3_months:.2f}%")
