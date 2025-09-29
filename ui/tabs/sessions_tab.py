@@ -1,11 +1,13 @@
 import streamlit as st
 from database.queries.sessions_queries import (
     generar_query_low_converting_sessions,
-    generar_query_session_path_analysis
+    generar_query_session_path_analysis,
+    generar_query_hourly_sessions_performance
 )
 from visualization.sessions_visualizations import (
     mostrar_low_converting_sessions,
-    mostrar_session_path_analysis
+    mostrar_session_path_analysis,
+    mostrar_hourly_sessions_performance
 )
 from database.connection import run_query
 
@@ -22,6 +24,11 @@ def show_sessions_tab(client, project, dataset, start_date, end_date):
         st.session_state.sessions_path_data = None
     if 'sessions_path_show' not in st.session_state:
         st.session_state.sessions_path_show = False
+    
+    if 'sessions_hourly_data' not in st.session_state:
+        st.session_state.sessions_hourly_data = None
+    if 'sessions_hourly_show' not in st.session_state:
+        st.session_state.sessions_hourly_show = False
     
     # Sección 1: Low Converting Sessions Analysis
     with st.expander("🔍 Análisis de Sesiones con Baja Conversión", expanded=st.session_state.sessions_low_converting_show):
@@ -68,5 +75,28 @@ def show_sessions_tab(client, project, dataset, start_date, end_date):
         if st.session_state.sessions_path_show and st.session_state.sessions_path_data is not None:
             mostrar_session_path_analysis(st.session_state.sessions_path_data)
     
+    # Sección 3: Hourly Sessions Performance
+    with st.expander("⏰ Rendimiento de Sesiones por Hora", expanded=st.session_state.sessions_hourly_show):
+        st.info("""
+        **Analiza el rendimiento de sesiones por hora del día:**
+        - Distribución de sesiones por hora y día de la semana
+        - Heatmap de actividad temporal
+        - Métricas de ecommerce por hora: view_item, add_to_cart, purchases
+        - Tasas de conversión por franja horaria
+        - Identificación de horas pico y horas valle
+        - Recomendaciones para optimización de campañas
+        """)
+        
+        if st.button("Analizar Rendimiento Horario", key="btn_sessions_hourly"):
+            with st.spinner("Analizando rendimiento por hora (esto puede tardar)..."):
+                query = generar_query_hourly_sessions_performance(project, dataset, start_date, end_date)
+                df = run_query(client, query)
+                st.session_state.sessions_hourly_data = df
+                st.session_state.sessions_hourly_show = True
+        
+        # Mostrar resultados si existen
+        if st.session_state.sessions_hourly_show and st.session_state.sessions_hourly_data is not None:
+            mostrar_hourly_sessions_performance(st.session_state.sessions_hourly_data)
+    
     # Placeholder para próximas consultas
-    st.info("🚧 **Próximamente:** Session Behavior by Device, Hourly Sessions Performance, Exit Pages Analysis")
+    st.info("🚧 **Próximamente:** Session Behavior by Device, Exit Pages Analysis")
