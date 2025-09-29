@@ -1,5 +1,5 @@
 from .sidebar import render_sidebar, get_project_dataset_selection
-from .tabs import show_cookies_tab, show_ecommerce_tab, show_acquisition_tab, show_events_tab
+from .tabs import show_cookies_tab, show_ecommerce_tab, show_acquisition_tab, show_events_tab, show_users_tab
 
 __all__ = [
     'render_sidebar', 
@@ -7,5 +7,6 @@ __all__ = [
     'show_cookies_tab', 
     'show_ecommerce_tab',
     'show_acquisition_tab',
-    'show_events_tab'
+    'show_events_tab',
+    'show_users_tab'
 ]
