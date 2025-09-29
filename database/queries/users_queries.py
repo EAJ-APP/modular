@@ -190,6 +190,7 @@ def generar_query_tiempo_primera_compra(project, dataset, start_date, end_date):
     ORDER BY users_with_purchase DESC
     LIMIT 100
     """
+
 def generar_query_landing_page_attribution(project, dataset, start_date, end_date):
     """
     First Landing Page Attribution
