@@ -1,3 +1,64 @@
+def generar_query_exit_pages(project, dataset, start_date, end_date):
+    """
+    Consulta para analizar las páginas de salida más frecuentes
+    Identifica dónde los usuarios abandonan el sitio
+    """
+    start_date_str = start_date.strftime('%Y%m%d')
+    end_date_str = end_date.strftime('%Y%m%d')
+    
+    return f"""
+    -- Most Frequent Exit Pages Analysis
+    -- Identifica las páginas donde los usuarios abandonan más frecuentemente
+    
+    WITH sessions_pages AS (
+      -- Extract page view data for each session
+      SELECT
+        user_pseudo_id AS cid,
+        (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id') AS session_id,
+        (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_location') AS page,
+        event_timestamp
+      FROM `{project}.{dataset}.events_*`
+      WHERE event_name = 'page_view'
+        AND _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
+    ),
+    
+    exit_pages AS (
+      -- Identify the exit page for each session
+      SELECT
+        cid,
+        session_id,
+        FIRST_VALUE(page) OVER (PARTITION BY cid, session_id ORDER BY event_timestamp DESC) AS exit_page
+      FROM sessions_pages
+    ),
+    
+    exit_page_stats AS (
+      -- Aggregate occurrences of each exit page
+      SELECT
+        exit_page,
+        COUNT(DISTINCT CONCAT(cid, session_id)) AS sessions
+      FROM exit_pages
+      GROUP BY exit_page
+    ),
+    
+    total_sessions AS (
+      SELECT COUNT(DISTINCT CONCAT(cid, session_id)) AS total
+      FROM exit_pages
+    )
+    
+    -- Calculate percentage and normalize URLs
+    SELECT
+      REGEXP_REPLACE(
+        REGEXP_REPLACE(exit_page, r'^https?://[^/]+', ''), -- Remove domain
+        r'[\\?].*', '' -- Remove query parameters
+      ) AS exit_page_path,
+      exit_page AS exit_page_full,
+      sessions,
+      ROUND((sessions / total) * 100, 2) AS exit_percentage
+    FROM exit_page_stats, total_sessions
+    ORDER BY sessions DESC
+    LIMIT 100
+    """
+
 def generar_query_hourly_sessions_performance(project, dataset, start_date, end_date):
     """
     Consulta para analizar el rendimiento de sesiones por hora
