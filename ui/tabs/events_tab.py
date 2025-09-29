@@ -3,13 +3,15 @@ from database.queries.events_queries import (
     generar_query_eventos_flatten,
     generar_query_eventos_resumen,
     generar_query_eventos_por_fecha,
-    generar_query_parametros_eventos
+    generar_query_parametros_eventos,
+    generar_query_metricas_diarias
 )
 from visualization.events_visualizations import (
     mostrar_eventos_flatten,
     mostrar_eventos_resumen,
     mostrar_eventos_por_fecha,
-    mostrar_parametros_evento
+    mostrar_parametros_evento,
+    mostrar_metricas_diarias
 )
 from database.connection import run_query
 
@@ -39,7 +41,27 @@ def show_events_tab(client, project, dataset, start_date, end_date):
     if 'events_params_name' not in st.session_state:
         st.session_state.events_params_name = ""
     
-    # Sección 1: Resumen de Eventos
+    if 'events_metricas_data' not in st.session_state:
+        st.session_state.events_metricas_data = None
+    if 'events_metricas_show' not in st.session_state:
+        st.session_state.events_metricas_show = False
+    
+    # Sección 1: Métricas Diarias (NUEVA - la pongo primera porque es muy útil)
+    with st.expander("📊 Métricas Diarias de Rendimiento", expanded=st.session_state.events_metricas_show):
+        st.info("Dashboard completo con métricas diarias: sesiones, usuarios, engagement, conversiones")
+        
+        if st.button("Analizar Métricas Diarias", key="btn_metricas_diarias"):
+            with st.spinner("Calculando métricas diarias..."):
+                query = generar_query_metricas_diarias(project, dataset, start_date, end_date)
+                df = run_query(client, query)
+                st.session_state.events_metricas_data = df
+                st.session_state.events_metricas_show = True
+        
+        # Mostrar resultados si existen
+        if st.session_state.events_metricas_show and st.session_state.events_metricas_data is not None:
+            mostrar_metricas_diarias(st.session_state.events_metricas_data)
+    
+    # Sección 2: Resumen de Eventos
     with st.expander("📊 Resumen de Eventos", expanded=st.session_state.events_resumen_show):
         st.info("Vista general de todos los tipos de eventos registrados")
         
@@ -54,7 +76,7 @@ def show_events_tab(client, project, dataset, start_date, end_date):
         if st.session_state.events_resumen_show and st.session_state.events_resumen_data is not None:
             mostrar_eventos_resumen(st.session_state.events_resumen_data)
     
-    # Sección 2: Evolución Temporal
+    # Sección 3: Evolución Temporal
     with st.expander("📅 Evolución Temporal de Eventos", expanded=st.session_state.events_fecha_show):
         st.info("Análisis de la evolución de eventos a lo largo del tiempo")
         
@@ -69,7 +91,7 @@ def show_events_tab(client, project, dataset, start_date, end_date):
         if st.session_state.events_fecha_show and st.session_state.events_fecha_data is not None:
             mostrar_eventos_por_fecha(st.session_state.events_fecha_data)
     
-    # Sección 3: Datos Completos Flattenizados
+    # Sección 4: Datos Completos Flattenizados
     with st.expander("🔍 Explorador de Datos Completo (Flattenizado)", expanded=st.session_state.events_flatten_show):
         st.warning("⚠️ Esta consulta puede tardar varios segundos. Limitada a 1000 registros.")
         st.info("Acceso completo a todos los campos de eventos, parámetros, propiedades de usuario e items")
@@ -85,7 +107,7 @@ def show_events_tab(client, project, dataset, start_date, end_date):
         if st.session_state.events_flatten_show and st.session_state.events_flatten_data is not None:
             mostrar_eventos_flatten(st.session_state.events_flatten_data)
     
-    # Sección 4: Parámetros de Evento Específico
+    # Sección 5: Parámetros de Evento Específico
     with st.expander("🎯 Análisis de Parámetros por Evento", expanded=st.session_state.events_params_show):
         st.info("Analiza los parámetros de un evento específico")
         
