@@ -279,3 +279,204 @@ def mostrar_parametros_evento(df, event_name):
     )
     fig.update_layout(yaxis={'categoryorder': 'total ascending'}, height=500)
     st.plotly_chart(fig, use_container_width=True)
+
+def mostrar_metricas_diarias(df):
+    """Visualización para métricas diarias completas"""
+    st.subheader("📊 Métricas Diarias de Rendimiento")
+    
+    if df.empty:
+        st.warning("No hay datos de métricas diarias para el rango seleccionado")
+        return
+    
+    # Convertir fecha y formatear
+    df['date_formatted'] = pd.to_datetime(df['date_formatted'])
+    df['fecha_display'] = df['date_formatted'].dt.strftime('%d/%m/%Y')
+    
+    # Métricas totales
+    total_sessions = df['sessions'].sum()
+    total_users = df['totalUsers'].sum()
+    total_new_users = df['NewUsers'].sum()
+    total_purchases = df['Purchases'].sum()
+    total_revenue = df['purchaseRevenue'].sum()
+    avg_session_duration = df['averageSessionDuration_seconds'].mean()
+    avg_engagement_rate = df['engagementRate_percent'].mean()
+    
+    # Mostrar métricas clave en cards
+    st.subheader("📈 Resumen del Período")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Sesiones", f"{total_sessions:,}")
+        st.metric("Usuarios Totales", f"{total_users:,}")
+    with col2:
+        st.metric("Nuevos Usuarios", f"{total_new_users:,}")
+        st.metric("Tasa Engagement", f"{avg_engagement_rate:.2f}%")
+    with col3:
+        st.metric("Total Compras", f"{total_purchases:,}")
+        st.metric("Ingresos Totales", f"€{total_revenue:,.2f}")
+    with col4:
+        st.metric("Duración Media Sesión", f"{avg_session_duration:.0f}s")
+        revenue_per_session = total_revenue / total_sessions if total_sessions > 0 else 0
+        st.metric("Ingresos/Sesión", f"€{revenue_per_session:.2f}")
+    
+    # Mostrar tabla completa
+    st.subheader("📋 Tabla de Datos")
+    st.dataframe(df.style.format({
+        'sessions': '{:,}',
+        'averageSessionDuration_seconds': '{:.2f}',
+        'totalUsers': '{:,}',
+        'NewUsers': '{:,}',
+        'Purchases': '{:,}',
+        'purchaseRevenue': '€{:,.2f}',
+        'screenPageViews': '{:,}',
+        'engagedSessions': '{:,}',
+        'engagementRate_percent': '{:.2f}%',
+        'eventCount': '{:,}'
+    }))
+    
+    # Gráficos de evolución
+    st.subheader("📊 Evolución Temporal")
+    
+    # Selector de métrica a visualizar
+    if 'metricas_diarias_selected_metric' not in st.session_state:
+        st.session_state.metricas_diarias_selected_metric = 'sessions'
+    
+    metricas_disponibles = {
+        'sessions': 'Sesiones',
+        'totalUsers': 'Usuarios Totales',
+        'NewUsers': 'Nuevos Usuarios',
+        'Purchases': 'Compras',
+        'purchaseRevenue': 'Ingresos (€)',
+        'screenPageViews': 'Page Views',
+        'engagedSessions': 'Sesiones Comprometidas',
+        'engagementRate_percent': 'Tasa de Engagement (%)',
+        'averageSessionDuration_seconds': 'Duración Media Sesión (s)'
+    }
+    
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        metrica_seleccionada = st.selectbox(
+            "Seleccionar métrica a visualizar:",
+            options=list(metricas_disponibles.keys()),
+            format_func=lambda x: metricas_disponibles[x],
+            index=list(metricas_disponibles.keys()).index(st.session_state.metricas_diarias_selected_metric),
+            key="metricas_diarias_selector"
+        )
+        st.session_state.metricas_diarias_selected_metric = metrica_seleccionada
+    
+    # Gráfico de línea para la métrica seleccionada
+    fig_line = px.line(
+        df,
+        x='fecha_display',
+        y=metrica_seleccionada,
+        title=f'Evolución de {metricas_disponibles[metrica_seleccionada]}',
+        labels={
+            metrica_seleccionada: metricas_disponibles[metrica_seleccionada],
+            'fecha_display': 'Fecha'
+        },
+        markers=True
+    )
+    fig_line.update_layout(xaxis_tickangle=-45)
+    st.plotly_chart(fig_line, use_container_width=True)
+    
+    # Gráficos de comparación
+    st.subheader("🔄 Comparativas")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Comparativa Usuarios vs Sesiones
+        fig_users_sessions = go.Figure()
+        fig_users_sessions.add_trace(go.Scatter(
+            x=df['fecha_display'],
+            y=df['totalUsers'],
+            name='Usuarios Totales',
+            mode='lines+markers'
+        ))
+        fig_users_sessions.add_trace(go.Scatter(
+            x=df['fecha_display'],
+            y=df['sessions'],
+            name='Sesiones',
+            mode='lines+markers'
+        ))
+        fig_users_sessions.update_layout(
+            title='Usuarios vs Sesiones',
+            xaxis_title='Fecha',
+            yaxis_title='Cantidad',
+            xaxis_tickangle=-45
+        )
+        st.plotly_chart(fig_users_sessions, use_container_width=True)
+    
+    with col2:
+        # Comparativa Engagement
+        fig_engagement = go.Figure()
+        fig_engagement.add_trace(go.Scatter(
+            x=df['fecha_display'],
+            y=df['engagementRate_percent'],
+            name='Tasa de Engagement',
+            mode='lines+markers',
+            line=dict(color='green')
+        ))
+        fig_engagement.update_layout(
+            title='Evolución del Engagement',
+            xaxis_title='Fecha',
+            yaxis_title='Tasa (%)',
+            xaxis_tickangle=-45
+        )
+        st.plotly_chart(fig_engagement, use_container_width=True)
+    
+    # Análisis de conversión (si hay compras)
+    if total_purchases > 0:
+        st.subheader("💰 Análisis de Conversión")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Evolución de compras e ingresos
+            fig_commerce = go.Figure()
+            fig_commerce.add_trace(go.Bar(
+                x=df['fecha_display'],
+                y=df['Purchases'],
+                name='Compras',
+                yaxis='y'
+            ))
+            fig_commerce.add_trace(go.Scatter(
+                x=df['fecha_display'],
+                y=df['purchaseRevenue'],
+                name='Ingresos (€)',
+                mode='lines+markers',
+                yaxis='y2',
+                line=dict(color='orange')
+            ))
+            fig_commerce.update_layout(
+                title='Compras e Ingresos',
+                xaxis_title='Fecha',
+                yaxis=dict(title='Número de Compras'),
+                yaxis2=dict(title='Ingresos (€)', overlaying='y', side='right'),
+                xaxis_tickangle=-45
+            )
+            st.plotly_chart(fig_commerce, use_container_width=True)
+        
+        with col2:
+            # Tasa de conversión
+            df['conversion_rate'] = (df['Purchases'] / df['sessions'] * 100).round(2)
+            fig_conversion = px.line(
+                df,
+                x='fecha_display',
+                y='conversion_rate',
+                title='Tasa de Conversión (%)',
+                labels={'conversion_rate': 'Tasa (%)', 'fecha_display': 'Fecha'},
+                markers=True
+            )
+            fig_conversion.update_layout(xaxis_tickangle=-45)
+            st.plotly_chart(fig_conversion, use_container_width=True)
+    
+    # Botón de descarga
+    if st.button("📥 Descargar Datos CSV", key="download_metricas_diarias"):
+        csv = df.to_csv(index=False)
+        st.download_button(
+            label="Descargar CSV",
+            data=csv,
+            file_name="metricas_diarias_ga4.csv",
+            mime="text/csv"
+        )
