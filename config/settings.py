@@ -3,7 +3,10 @@ from datetime import datetime
 
 class Settings:
     # Configuración de la aplicación
-    APP_TITLE = "📊 Análisis Exploratorio GA4"
+    APP_TITLE = "🛡️ BigQuery Shield"
+    APP_NAME = "BigQuery Shield"
+    APP_VERSION = "1.0.0"
+    COMPANY_NAME = "FLAT 101 Digital Business"
     PAGE_LAYOUT = "wide"
     
     # Configuración de BigQuery
