@@ -17,7 +17,8 @@ try:
         show_acquisition_tab,
         show_events_tab,
         show_users_tab,
-        show_sessions_tab
+        show_sessions_tab,
+        show_monitoring_tab  # NUEVO
     )
     
 except ImportError as e:
@@ -81,16 +82,17 @@ def main():
             days_range = (end_date - start_date).days
             st.metric("Período", f"{days_range} días")
 
-    # Tabs principales
+    # Tabs principales - AÑADIDO MONITORING
     tab_titles = [
         "🍪 Cookies",
         "🛒 Ecommerce", 
         "📈 Adquisición",
         "🎯 Eventos",
         "👥 Usuarios",
-        "🕒 Sesiones"
+        "🕒 Sesiones",
+        "📊 Monitorización"  # NUEVO
     ]
-    tab_ids = ["cookies", "ecommerce", "acquisition", "events", "users", "sessions"]
+    tab_ids = ["cookies", "ecommerce", "acquisition", "events", "users", "sessions", "monitoring"]
     
     tabs = st.tabs(tab_titles)
     
@@ -109,6 +111,8 @@ def main():
                 show_users_tab(client, selected_project, selected_dataset, start_date, end_date)
             elif tab_id == "sessions":
                 show_sessions_tab(client, selected_project, selected_dataset, start_date, end_date)
+            elif tab_id == "monitoring":
+                show_monitoring_tab(client, selected_project)  # NUEVO
     
     # Footer profesional
     st.divider()
