@@ -5,7 +5,8 @@ from .tabs import (
     show_acquisition_tab, 
     show_events_tab, 
     show_users_tab,
-    show_sessions_tab
+    show_sessions_tab,
+    show_monitoring_tab  # NUEVO
 )
 
 __all__ = [
@@ -16,5 +17,6 @@ __all__ = [
     'show_acquisition_tab',
     'show_events_tab',
     'show_users_tab',
-    'show_sessions_tab'
+    'show_sessions_tab',
+    'show_monitoring_tab'  # NUEVO
 ]
