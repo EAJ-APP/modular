@@ -4,6 +4,7 @@ from .acquisition_tab import show_acquisition_tab
 from .events_tab import show_events_tab
 from .users_tab import show_users_tab
 from .sessions_tab import show_sessions_tab
+from .monitoring_tab import show_monitoring_tab  # NUEVO
 
 __all__ = [
     'show_cookies_tab',
@@ -11,5 +12,6 @@ __all__ = [
     'show_acquisition_tab',
     'show_events_tab',
     'show_users_tab',
-    'show_sessions_tab'
+    'show_sessions_tab',
+    'show_monitoring_tab'  # NUEVO
 ]
