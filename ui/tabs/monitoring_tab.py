@@ -296,9 +296,9 @@ def show_monitoring_tab(client, project):
             y vuelve a ejecutar. Verás una reducción proporcional en el consumo.
             """)
     
-    # Calculadora de costos
+    # Calculadora de costes
     st.markdown("---")
-    st.markdown("### 🧮 Calculadora de Costos")
+    st.markdown("### 🧮 Calculadora de Costes")
     
     col1, col2, col3 = st.columns(3)
     
