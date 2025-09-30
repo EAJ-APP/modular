@@ -19,7 +19,7 @@ try:
         show_users_tab,
         show_sessions_tab
     )
-    st.sidebar.success("✅ Módulos importados correctamente")
+    # REMOVED: st.sidebar.success("✅ Módulos importados correctamente")
     
 except ImportError as e:
     st.error(f"❌ Error de importación: {e}")
@@ -49,7 +49,7 @@ def main():
     # Selectores de proyecto y dataset
     try:
         selected_project, selected_dataset = get_project_dataset_selection(client)
-        st.sidebar.success(f"✅ {selected_project}.{selected_dataset}")
+        # REMOVED: st.sidebar.success(f"✅ {selected_project}.{selected_dataset}")
     except Exception as e:
         st.error(f"Error al cargar proyectos y datasets: {e}")
         return
