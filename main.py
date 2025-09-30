@@ -19,7 +19,6 @@ try:
         show_users_tab,
         show_sessions_tab
     )
-    # REMOVED: st.sidebar.success("✅ Módulos importados correctamente")
     
 except ImportError as e:
     st.error(f"❌ Error de importación: {e}")
@@ -33,10 +32,28 @@ def main():
     
     # Configuración de página
     st.set_page_config(
-        page_title=Settings.APP_TITLE, 
-        layout=Settings.PAGE_LAYOUT
+        page_title="BigQuery Shield | FLAT 101", 
+        layout=Settings.PAGE_LAYOUT,
+        page_icon="🛡️",
+        initial_sidebar_state="expanded"
     )
-    st.title(Settings.APP_TITLE)
+    
+    # Header con logo y título
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        # Intenta cargar el logo desde archivo local o URL
+        try:
+            st.image("assets/logo.png", width=150)
+        except:
+            # Si no existe el archivo, usar un placeholder o texto
+            st.markdown("### FLAT 101")
+    
+    with col2:
+        st.title("🛡️ BigQuery Shield")
+        st.markdown("**Plataforma de análisis avanzado para Google Analytics 4**")
+    
+    # Línea divisoria
+    st.divider()
 
     # Renderizar sidebar y obtener configuración
     development_mode, start_date, end_date = render_sidebar()
@@ -49,14 +66,24 @@ def main():
     # Selectores de proyecto y dataset
     try:
         selected_project, selected_dataset = get_project_dataset_selection(client)
-        # REMOVED: st.sidebar.success(f"✅ {selected_project}.{selected_dataset}")
     except Exception as e:
         st.error(f"Error al cargar proyectos y datasets: {e}")
         return
+    
+    # Mostrar info de dataset seleccionado de forma compacta
+    with st.expander("ℹ️ Información del Proyecto", expanded=False):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Proyecto", selected_project)
+        with col2:
+            st.metric("Dataset", selected_dataset)
+        with col3:
+            days_range = (end_date - start_date).days
+            st.metric("Período", f"{days_range} días")
 
     # Tabs principales
     tab_titles = [
-        "🍪 Cookies y Privacidad",
+        "🍪 Cookies",
         "🛒 Ecommerce", 
         "📈 Adquisición",
         "🎯 Eventos",
@@ -69,7 +96,7 @@ def main():
     
     for tab, tab_id in zip(tabs, tab_ids):
         with tab:
-            st.header(f"Análisis de {tab_id.capitalize()}")
+            # Título más compacto dentro de cada tab
             if tab_id == "cookies":
                 show_cookies_tab(client, selected_project, selected_dataset, start_date, end_date)
             elif tab_id == "ecommerce":
@@ -82,8 +109,16 @@ def main():
                 show_users_tab(client, selected_project, selected_dataset, start_date, end_date)
             elif tab_id == "sessions":
                 show_sessions_tab(client, selected_project, selected_dataset, start_date, end_date)
-            else:
-                st.info(f"🔧 Sección en desarrollo. Próximamente: consultas para {tab_id}")
+    
+    # Footer profesional
+    st.divider()
+    footer_col1, footer_col2, footer_col3 = st.columns([2, 2, 1])
+    with footer_col1:
+        st.caption("© 2025 FLAT 101 Digital Business | BigQuery Shield")
+    with footer_col2:
+        st.caption(f"📊 Analizando: {selected_project}.{selected_dataset}")
+    with footer_col3:
+        st.caption(f"v1.0.0")
 
 if __name__ == "__main__":
     main()
