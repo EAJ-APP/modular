@@ -27,12 +27,15 @@ def render_sidebar():
     return development_mode, start_date, end_date
 
 def get_project_dataset_selection(client):
-    """Obtiene la selección de proyecto y dataset"""
+    """Obtiene la selección de proyecto y dataset - Versión silenciosa"""
     try:
         projects = [p.project_id for p in client.list_projects()]
         selected_project = st.sidebar.selectbox("Proyecto", projects)
         datasets = [d.dataset_id for d in client.list_datasets(selected_project)]
         selected_dataset = st.sidebar.selectbox("Dataset GA4", datasets)
+        
+        # REMOVED: st.sidebar.success(f"✅ {selected_project}.{selected_dataset}")
+        
         return selected_project, selected_dataset
     except Exception as e:
         handle_bq_error(e)
