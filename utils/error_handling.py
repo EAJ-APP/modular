@@ -14,7 +14,7 @@ def handle_bq_error(e, query=None):
     st.stop()
 
 def check_dependencies():
-    """Verifica dependencias esenciales - Versión simplificada"""
+    """Verifica dependencias esenciales - Versión silenciosa"""
     try:
         # Solo verificar las esenciales para que funcione
         import pandas
@@ -25,9 +25,9 @@ def check_dependencies():
         try:
             import protobuf
         except ImportError:
-            st.sidebar.warning("⚠️ protobuf no instalado (opcional)")
+            pass  # REMOVED: st.sidebar.warning("⚠️ protobuf no instalado (opcional)")
             
-        st.sidebar.success("✅ Dependencias principales OK")
+        # REMOVED: st.sidebar.success("✅ Dependencias principales OK")
         
     except ImportError as e:
         st.error(f"❌ Error de dependencias: {str(e)}")
