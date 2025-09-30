@@ -11,7 +11,7 @@ class Settings:
     
     # Configuración de BigQuery
     QUERY_TIMEOUT = 30
-    DEFAULT_START_DATE = pd.to_datetime("2023-01-01")
+    DEFAULT_START_DATE = pd.to_datetime("2025-07-01")
     DEFAULT_END_DATE = pd.to_datetime("today")
     
     # Colores para gráficos
