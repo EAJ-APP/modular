@@ -877,33 +877,33 @@ def mostrar_session_path_analysis(df):
         else:
             node_colors.append('rgba(33, 150, 243, 0.8)')  # Azul para páginas intermedias
     
-    # Crear Sankey diagram MEJORADO
-    fig_sankey = go.Figure(data=[go.Sankey(
-        node=dict(
-            pad=20,
-            thickness=25,
-            line=dict(color="white", width=2),
-            label=all_nodes,
-            color=node_colors,
-            customdata=[node.replace(' [entrada]', '').replace(' [salida]', '').replace(' [página]', '').replace(' ←', '').replace(' →', '') for node in all_nodes],
-            hovertemplate='%{customdata}<br>%{value} sesiones<extra></extra>'
-        ),
-        link=dict(
-            source=all_sources,
-            target=all_targets,
-            value=all_values,
-            color="rgba(0, 0, 0, 0.2)",
-            hovertemplate='%{value} sesiones<extra></extra>'
+        # Crear Sankey diagram MEJORADO
+        fig_sankey = go.Figure(data=[go.Sankey(
+            node=dict(
+                pad=20,
+                thickness=25,
+                line=dict(color="white", width=2),
+                label=all_nodes,
+                color=node_colors,
+                customdata=[node.replace(' [entrada]', '').replace(' [salida]', '').replace(' [página]', '').replace(' ←', '').replace(' →', '') for node in all_nodes],
+                hovertemplate='%{customdata}<br>%{value} sesiones<extra></extra>'
+            ),
+            link=dict(
+                source=all_sources,
+                target=all_targets,
+                value=all_values,
+                color="rgba(0, 0, 0, 0.2)",
+                hovertemplate='%{value} sesiones<extra></extra>'
+            )
+        )])
+        
+        fig_sankey.update_layout(
+            title=f"Diagrama de Flujo de Navegación (Top {num_routes} Rutas)",
+            height=800,
+            font=dict(size=11, family="Arial"),
+            plot_bgcolor='white',
+            paper_bgcolor='white'
         )
-    )])
-    
-    fig_sankey.update_layout(
-        title=f"Diagrama de Flujo de Navegación (Top {num_routes} Rutas)",
-        height=800,
-        font=dict(size=11, family="Arial"),
-        plot_bgcolor='white',
-        paper_bgcolor='white'
-    )
     
     st.plotly_chart(fig_sankey, use_container_width=True)
     
