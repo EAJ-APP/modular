@@ -244,12 +244,12 @@ def generar_query_atribucion_marketing(project, dataset, start_date, end_date):
     """
 
 def generar_query_atribucion_completa(project, dataset, start_date, end_date):
-    """Consulta COMPLETAMENTE NUEVA para 7 modelos - VERSIÓN SIMPLIFICADA"""
+    """Consulta COMPLETAMENTE NUEVA para 7 modelos - CON DATA DRIVEN MEJORADO"""
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
     return f"""
-    -- CONSULTA DE 7 MODELOS - VERSIÓN SIMPLIFICADA Y FUNCIONAL
+    -- CONSULTA DE 7 MODELOS - CON DATA DRIVEN ALGORÍTMICO MEJORADO
     WITH base_data AS (
       SELECT
         user_pseudo_id,
@@ -267,23 +267,33 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
       WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
         AND event_name IN ('session_start', 'purchase')
     ),
+    
     user_conversions AS (
       SELECT DISTINCT user_pseudo_id
       FROM base_data
       WHERE conversion = 1
     ),
+    
     conversion_paths AS (
       SELECT *
       FROM base_data
       WHERE user_pseudo_id IN (SELECT user_pseudo_id FROM user_conversions)
     ),
+    
     session_ranking AS (
       SELECT *,
         ROW_NUMBER() OVER (PARTITION BY user_pseudo_id ORDER BY session_start_ts) as session_asc,
         ROW_NUMBER() OVER (PARTITION BY user_pseudo_id ORDER BY session_start_ts DESC) as session_desc,
-        COUNT(*) OVER (PARTITION BY user_pseudo_id) as total_sessions
+        COUNT(*) OVER (PARTITION BY user_pseudo_id) as total_sessions,
+        -- Calcular tiempo desde la sesión (en días) para time decay
+        DATE_DIFF(
+          MAX(CASE WHEN conversion = 1 THEN DATE(session_start_ts) END) OVER (PARTITION BY user_pseudo_id),
+          DATE(session_start_ts),
+          DAY
+        ) as days_to_conversion
       FROM conversion_paths
     ),
+    
     -- 1. Last Click
     last_click AS (
       SELECT
@@ -300,6 +310,7 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
       FROM session_ranking
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
+    
     -- 2. First Click
     first_click AS (
       SELECT
@@ -316,6 +327,7 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
       FROM session_ranking
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
+    
     -- 3. Linear
     linear AS (
       SELECT
@@ -332,7 +344,8 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
       FROM session_ranking
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
-    -- 4. Time Decay
+    
+    -- 4. Time Decay (decay exponencial: peso = 2^(-días/7))
     time_decay AS (
       SELECT
         'Time Decay' AS attribution_model,
@@ -343,12 +356,20 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
         COUNT(*) AS touchpoints,
         SUM(conversion) AS conversions,
         SUM(revenue) AS revenue,
-        SUM(conversion * (1.0 / session_asc)) AS attributed_conversions,
-        SUM(revenue * (1.0 / session_asc)) AS attributed_revenue
+        SUM(
+          conversion * POW(2, -CAST(days_to_conversion AS FLOAT64) / 7.0) /
+          SUM(POW(2, -CAST(days_to_conversion AS FLOAT64) / 7.0)) OVER (PARTITION BY user_pseudo_id)
+        ) AS attributed_conversions,
+        SUM(
+          revenue * POW(2, -CAST(days_to_conversion AS FLOAT64) / 7.0) /
+          SUM(POW(2, -CAST(days_to_conversion AS FLOAT64) / 7.0)) OVER (PARTITION BY user_pseudo_id)
+        ) AS attributed_revenue
       FROM session_ranking
+      WHERE days_to_conversion IS NOT NULL
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
-    -- 5. Position Based
+    
+    -- 5. Position Based (40% primer, 40% último, 20% intermedios)
     position_based AS (
       SELECT
         'Position Based' AS attribution_model,
@@ -361,21 +382,24 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
         SUM(revenue) AS revenue,
         SUM(
           CASE 
-            WHEN session_asc = 1 THEN conversion * 0.4
-            WHEN session_desc = 1 THEN conversion * 0.4
-            ELSE conversion * 0.2
+            WHEN total_sessions = 1 THEN conversion  -- Solo 1 sesión = 100%
+            WHEN session_asc = 1 THEN conversion * 0.4  -- Primera = 40%
+            WHEN session_desc = 1 THEN conversion * 0.4  -- Última = 40%
+            ELSE conversion * 0.2 / (total_sessions - 2)  -- Intermedias = 20% repartido
           END
         ) AS attributed_conversions,
         SUM(
           CASE 
+            WHEN total_sessions = 1 THEN revenue
             WHEN session_asc = 1 THEN revenue * 0.4
             WHEN session_desc = 1 THEN revenue * 0.4
-            ELSE revenue * 0.2
+            ELSE revenue * 0.2 / (total_sessions - 2)
           END
         ) AS attributed_revenue
       FROM session_ranking
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
+    
     -- 6. Last Non-Direct
     last_non_direct AS (
       SELECT
@@ -387,12 +411,34 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
         COUNT(*) AS touchpoints,
         SUM(conversion) AS conversions,
         SUM(revenue) AS revenue,
-        SUM(CASE WHEN utm_source != '(direct)' AND session_desc = 1 THEN conversion ELSE 0 END) AS attributed_conversions,
-        SUM(CASE WHEN utm_source != '(direct)' AND session_desc = 1 THEN revenue ELSE 0 END) AS attributed_revenue
+        SUM(
+          CASE 
+            WHEN session_desc = 1 AND utm_source != '(direct)' THEN conversion
+            WHEN session_desc = 1 AND utm_source = '(direct)' THEN 
+              -- Si el último es directo, dar crédito al penúltimo no-directo
+              CASE 
+                WHEN session_desc = 2 AND utm_source != '(direct)' THEN conversion
+                ELSE 0
+              END
+            ELSE 0
+          END
+        ) AS attributed_conversions,
+        SUM(
+          CASE 
+            WHEN session_desc = 1 AND utm_source != '(direct)' THEN revenue
+            WHEN session_desc = 1 AND utm_source = '(direct)' THEN 
+              CASE 
+                WHEN session_desc = 2 AND utm_source != '(direct)' THEN revenue
+                ELSE 0
+              END
+            ELSE 0
+          END
+        ) AS attributed_revenue
       FROM session_ranking
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
-    -- 7. Data Driven (simplificado)
+    
+    -- 7. Data Driven (NUEVO: Algoritmo mejorado basado en múltiples factores)
     data_driven AS (
       SELECT
         'Data Driven' AS attribution_model,
@@ -403,11 +449,87 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
         COUNT(*) AS touchpoints,
         SUM(conversion) AS conversions,
         SUM(revenue) AS revenue,
-        SUM(conversion * 0.5) AS attributed_conversions,
-        SUM(revenue * 0.5) AS attributed_revenue
+        SUM(
+          conversion * (
+            -- Factor 1: Peso por posición (U-shaped mejorado)
+            CASE 
+              WHEN total_sessions = 1 THEN 1.0
+              WHEN session_asc = 1 THEN 0.35  -- Primer touch: 35%
+              WHEN session_desc = 1 THEN 0.45  -- Último touch: 45%
+              ELSE 0.20 / (total_sessions - 2)  -- Intermedios: 20%
+            END
+            *
+            -- Factor 2: Recencia (decay suave)
+            POW(0.9, CAST(days_to_conversion AS FLOAT64))
+            *
+            -- Factor 3: Frecuencia (más sesiones = más peso)
+            (1.0 + LOG(CAST(total_sessions AS FLOAT64) + 1) / 10.0)
+            *
+            -- Factor 4: Calidad del canal (paid > organic > direct)
+            CASE 
+              WHEN utm_medium IN ('cpc', 'ppc', 'paid') THEN 1.2
+              WHEN utm_medium = 'organic' THEN 1.0
+              WHEN utm_source = '(direct)' THEN 0.8
+              ELSE 1.0
+            END
+          ) /
+          -- Normalizar para que sume 1 por usuario
+          SUM(
+            CASE 
+              WHEN total_sessions = 1 THEN 1.0
+              WHEN session_asc = 1 THEN 0.35
+              WHEN session_desc = 1 THEN 0.45
+              ELSE 0.20 / (total_sessions - 2)
+            END
+            * POW(0.9, CAST(days_to_conversion AS FLOAT64))
+            * (1.0 + LOG(CAST(total_sessions AS FLOAT64) + 1) / 10.0)
+            * CASE 
+                WHEN utm_medium IN ('cpc', 'ppc', 'paid') THEN 1.2
+                WHEN utm_medium = 'organic' THEN 1.0
+                WHEN utm_source = '(direct)' THEN 0.8
+                ELSE 1.0
+              END
+          ) OVER (PARTITION BY user_pseudo_id)
+        ) AS attributed_conversions,
+        SUM(
+          revenue * (
+            CASE 
+              WHEN total_sessions = 1 THEN 1.0
+              WHEN session_asc = 1 THEN 0.35
+              WHEN session_desc = 1 THEN 0.45
+              ELSE 0.20 / (total_sessions - 2)
+            END
+            * POW(0.9, CAST(days_to_conversion AS FLOAT64))
+            * (1.0 + LOG(CAST(total_sessions AS FLOAT64) + 1) / 10.0)
+            * CASE 
+                WHEN utm_medium IN ('cpc', 'ppc', 'paid') THEN 1.2
+                WHEN utm_medium = 'organic' THEN 1.0
+                WHEN utm_source = '(direct)' THEN 0.8
+                ELSE 1.0
+              END
+          ) /
+          SUM(
+            CASE 
+              WHEN total_sessions = 1 THEN 1.0
+              WHEN session_asc = 1 THEN 0.35
+              WHEN session_desc = 1 THEN 0.45
+              ELSE 0.20 / (total_sessions - 2)
+            END
+            * POW(0.9, CAST(days_to_conversion AS FLOAT64))
+            * (1.0 + LOG(CAST(total_sessions AS FLOAT64) + 1) / 10.0)
+            * CASE 
+                WHEN utm_medium IN ('cpc', 'ppc', 'paid') THEN 1.2
+                WHEN utm_medium = 'organic' THEN 1.0
+                WHEN utm_source = '(direct)' THEN 0.8
+                ELSE 1.0
+              END
+          ) OVER (PARTITION BY user_pseudo_id)
+        ) AS attributed_revenue
       FROM session_ranking
+      WHERE days_to_conversion IS NOT NULL
       GROUP BY utm_source, utm_medium, utm_campaign, device_type
     ),
+    
     -- COMBINAR LOS 7 MODELOS
     all_models AS (
       SELECT * FROM last_click
@@ -418,6 +540,7 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
       UNION ALL SELECT * FROM last_non_direct
       UNION ALL SELECT * FROM data_driven
     )
+    
     SELECT
       attribution_model,
       utm_source,
