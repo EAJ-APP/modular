@@ -103,83 +103,53 @@ def generar_query_relacion_productos(project, dataset, start_date, end_date):
     """
 
 def generar_query_funnel_por_producto(project, dataset, start_date, end_date):
-    """Funnel de conversión por producto"""
+    """Funnel de conversión por producto - VERSIÓN OPTIMIZADA"""
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
     return f"""
-    WITH events_data AS (
+    -- VERSIÓN OPTIMIZADA - Agregación directa sin JOINs costosos
+    WITH product_events AS (
       SELECT
-        user_pseudo_id,
+        items.item_name,
         event_name,
-        TIMESTAMP_MICROS(event_timestamp) AS event_timestamp,
-        item.item_name AS item_name 
+        user_pseudo_id
       FROM 
         `{project}.{dataset}.events_*`,
-        UNNEST(items) AS item
+        UNNEST(items) AS items
       WHERE 
         event_name IN ('view_item', 'add_to_cart', 'begin_checkout', 'purchase')
         AND _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
+        AND items.item_name IS NOT NULL
     ),
-
-    event_stages AS (
+    
+    product_metrics AS (
       SELECT
-        user_pseudo_id,
-        event_timestamp,
         item_name,
-        CASE event_name
-          WHEN 'view_item' THEN 'view_item'
-          WHEN 'add_to_cart' THEN 'add_to_cart'
-          WHEN 'begin_checkout' THEN 'begin_checkout'
-          WHEN 'purchase' THEN 'purchase'
-        END AS event_stage
+        COUNT(DISTINCT CASE WHEN event_name = 'view_item' THEN user_pseudo_id END) AS view_item,
+        COUNT(DISTINCT CASE WHEN event_name = 'add_to_cart' THEN user_pseudo_id END) AS add_to_cart,
+        COUNT(DISTINCT CASE WHEN event_name = 'begin_checkout' THEN user_pseudo_id END) AS begin_checkout,
+        COUNT(DISTINCT CASE WHEN event_name = 'purchase' THEN user_pseudo_id END) AS purchase
       FROM 
-        events_data
-    ),
-
-    aggregated_funnel AS (
-      SELECT
-        vi.item_name,
-        COUNT(DISTINCT vi.user_pseudo_id) AS view_item_count,
-        COUNT(DISTINCT atc.user_pseudo_id) AS add_to_cart_count,
-        COUNT(DISTINCT bc.user_pseudo_id) AS begin_checkout_count,
-        COUNT(DISTINCT p.user_pseudo_id) AS purchase_count
-      FROM 
-        event_stages vi
-        LEFT JOIN event_stages atc
-          ON vi.user_pseudo_id = atc.user_pseudo_id
-          AND vi.item_name = atc.item_name
-          AND vi.event_timestamp < atc.event_timestamp
-          AND atc.event_stage = 'add_to_cart'
-        LEFT JOIN event_stages bc
-          ON atc.user_pseudo_id = bc.user_pseudo_id
-          AND atc.item_name = bc.item_name
-          AND atc.event_timestamp < bc.event_timestamp
-          AND bc.event_stage = 'begin_checkout'
-        LEFT JOIN event_stages p
-          ON bc.user_pseudo_id = p.user_pseudo_id
-          AND bc.item_name = p.item_name
-          AND bc.event_timestamp < p.event_timestamp
-          AND p.event_stage = 'purchase'
-      WHERE 
-        vi.event_stage = 'view_item'
+        product_events
       GROUP BY 
-        vi.item_name
+        item_name
     )
-
+    
     SELECT
       item_name,
-      view_item_count AS view_item,
-      add_to_cart_count AS add_to_cart,
-      begin_checkout_count AS begin_checkout,
-      purchase_count AS purchase,
-      ROUND(COALESCE(add_to_cart_count / NULLIF(view_item_count, 0), 0) * 100, 2) AS add_to_cart_rate,
-      ROUND(COALESCE(begin_checkout_count / NULLIF(view_item_count, 0), 0) * 100, 2) AS begin_checkout_rate,
-      ROUND(COALESCE(purchase_count / NULLIF(view_item_count, 0), 0) * 100, 2) AS purchase_rate
+      view_item,
+      add_to_cart,
+      begin_checkout,
+      purchase,
+      ROUND(SAFE_DIVIDE(add_to_cart, view_item) * 100, 2) AS add_to_cart_rate,
+      ROUND(SAFE_DIVIDE(begin_checkout, view_item) * 100, 2) AS begin_checkout_rate,
+      ROUND(SAFE_DIVIDE(purchase, view_item) * 100, 2) AS purchase_rate
     FROM 
-      aggregated_funnel
+      product_metrics
     WHERE 
-      view_item_count > 0
+      view_item > 0
     ORDER BY 
-      purchase_count DESC, view_item_count DESC
+      purchase DESC, view_item DESC
+    LIMIT 100
     """
