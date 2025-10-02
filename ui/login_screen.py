@@ -56,52 +56,40 @@ def show_login_screen():
     st.markdown("## Selecciona cómo conectarte:")
     st.markdown("")
     
-    # OPCIÓN 1: OAuth Login con Google - IGUAL QUE EN DEBUG
+    # OPCIÓN 1: OAuth Login con Google - URL PRE-GENERADA
     with st.container():
         st.markdown("### 🔐 Login con Google")
         st.markdown("Accede usando tu cuenta de Google con permisos en BigQuery")
         
         if oauth_available:
-            # Botón para generar y mostrar la URL
-            if st.button("🚀 Generar URL de Login", use_container_width=True, type="primary", key="oauth_login_btn"):
-                try:
-                    oauth_config = AuthConfig.get_oauth_config()
-                    
-                    oauth_handler = OAuthHandler(
-                        client_id=oauth_config['client_id'],
-                        client_secret=oauth_config['client_secret'],
-                        redirect_uri=oauth_config['redirect_uri'],
-                        scopes=AuthConfig.SCOPES
-                    )
-                    
-                    auth_url = oauth_handler.get_authorization_url()
-                    
-                    st.success("✅ URL generada correctamente")
-                    
-                    # Mostrar la URL
-                    st.markdown("### 🔗 URL de Autorización:")
+            try:
+                # Generar la URL AL CARGAR LA PÁGINA (no al hacer click)
+                oauth_config = AuthConfig.get_oauth_config()
+                
+                oauth_handler = OAuthHandler(
+                    client_id=oauth_config['client_id'],
+                    client_secret=oauth_config['client_secret'],
+                    redirect_uri=oauth_config['redirect_uri'],
+                    scopes=AuthConfig.SCOPES
+                )
+                
+                auth_url = oauth_handler.get_authorization_url()
+                
+                # Botón directo con la URL ya generada
+                st.link_button(
+                    "🚀 Login con Google",
+                    auth_url,
+                    use_container_width=True,
+                    type="primary"
+                )
+                
+                # Opcional: mostrar la URL por si acaso
+                with st.expander("🔍 Ver URL de autenticación"):
                     st.code(auth_url, language=None)
-                    
-                    # Botón para abrir en la misma pestaña
-                    st.markdown(f"""
-                    <a href="{auth_url}" target="_self">
-                        <button style="
-                            background-color:#4CAF50;
-                            color:white;
-                            padding:12px 24px;
-                            border:none;
-                            border-radius:8px;
-                            cursor:pointer;
-                            font-size:16px;
-                            width:100%;
-                        ">
-                            🚀 Abrir Google Login
-                        </button>
-                    </a>
-                    """, unsafe_allow_html=True)
-                    
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
+                    st.caption("Puedes copiar esta URL y pegarla en tu navegador si el botón no funciona")
+                
+            except Exception as e:
+                st.error(f"❌ Error generando URL de login: {str(e)}")
             
             # Botón de debug
             if st.button("🔧 ¿Problemas? Ver Debug", use_container_width=True, key="debug_oauth_btn"):
