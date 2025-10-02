@@ -29,14 +29,16 @@ with col1:
     st.title("🔬 Diagnóstico de Autenticación OAuth")
     st.caption("Herramienta de diagnóstico para resolver problemas de autenticación con Google Cloud")
 with col2:
-    # Usar link para volver sin abrir nueva pestaña
-    st.markdown("""
-        <a href="/" style="text-decoration: none;">
-            <button style="background-color:#2196F3; color:white; padding:10px 20px; border:none; border-radius:8px; cursor:pointer; width:100%;">
-                🏠 Volver al Login
-            </button>
-        </a>
-    """, unsafe_allow_html=True)
+    # Botón usando componente HTML con JavaScript
+    if st.button("🏠 Volver al Login", use_container_width=True):
+        st.components.v1.html(
+            """
+            <script>
+                window.parent.location.href = "/";
+            </script>
+            """,
+            height=0,
+        )
 
 st.divider()
 
