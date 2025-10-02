@@ -5,10 +5,20 @@ import os
 # Añadir el path para imports relativos
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-try:
+# Importar componentes de autenticación
+from auth import SessionManager, AuthConfig
+from ui.login_screen import show_login_screen
+
+# Importar resto de componentes (solo si está autenticado)
+def import_app_components():
+    """Importa componentes de la app solo cuando sea necesario"""
+    global Settings, check_dependencies, setup_environment
+    global render_sidebar, get_project_dataset_selection
+    global show_cookies_tab, show_ecommerce_tab, show_acquisition_tab
+    global show_events_tab, show_users_tab, show_sessions_tab, show_monitoring_tab
+    
     from config.settings import Settings
     from utils import setup_environment, check_dependencies
-    from database.connection import get_bq_client
     from ui import (
         render_sidebar, 
         get_project_dataset_selection, 
@@ -18,15 +28,30 @@ try:
         show_events_tab,
         show_users_tab,
         show_sessions_tab,
-        show_monitoring_tab  # NUEVO
+        show_monitoring_tab
     )
-    
-except ImportError as e:
-    st.error(f"❌ Error de importación: {e}")
-    st.stop()
 
 def main():
     """Función principal de la aplicación"""
+    
+    # Inicializar sesión
+    SessionManager.initialize_session()
+    
+    # Verificar si el usuario está autenticado
+    if not SessionManager.is_authenticated():
+        # Mostrar pantalla de login
+        show_login_screen()
+        return
+    
+    # Usuario autenticado - cargar la aplicación principal
+    show_main_app()
+
+def show_main_app():
+    """Muestra la aplicación principal (después de autenticación)"""
+    
+    # Importar componentes
+    import_app_components()
+    
     # Configuración inicial
     check_dependencies()
     setup_environment()
@@ -39,19 +64,12 @@ def main():
         initial_sidebar_state="expanded"
     )
     
-    # Header con logo y título
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        # Intenta cargar el logo desde archivo local o URL
-        try:
-            st.image("assets/logo.png", width=150)
-        except:
-            # Si no existe el archivo, usar un placeholder o texto
-            st.markdown("### FLAT 101")
+    # Refrescar credenciales OAuth si es necesario
+    if SessionManager.get_auth_method() == 'oauth':
+        SessionManager.refresh_oauth_credentials()
     
-    with col2:
-        st.title("🛡️ BigQuery Shield")
-        st.markdown("**Plataforma de análisis avanzado para Google Analytics 4**")
+    # Header con usuario y logout
+    render_header()
     
     # Línea divisoria
     st.divider()
@@ -59,10 +77,15 @@ def main():
     # Renderizar sidebar y obtener configuración
     development_mode, start_date, end_date = render_sidebar()
 
-    # Conexión a BigQuery
-    client = get_bq_client(
-        st.session_state.creds if development_mode and "creds" in st.session_state else None
-    )
+    # Obtener cliente de BigQuery desde la sesión
+    client = SessionManager.get_bigquery_client()
+    
+    if not client:
+        st.error("❌ Error: No hay cliente de BigQuery disponible")
+        if st.button("🔄 Reiniciar sesión"):
+            SessionManager.logout()
+            st.rerun()
+        return
 
     # Selectores de proyecto y dataset
     try:
@@ -82,7 +105,7 @@ def main():
             days_range = (end_date - start_date).days
             st.metric("Período", f"{days_range} días")
 
-    # Tabs principales - AÑADIDO MONITORING
+    # Tabs principales
     tab_titles = [
         "🍪 Cookies",
         "🛒 Ecommerce", 
@@ -90,7 +113,7 @@ def main():
         "🎯 Eventos",
         "👥 Usuarios",
         "🕒 Sesiones",
-        "📊 Monitorización"  # NUEVO
+        "📊 Monitorización"
     ]
     tab_ids = ["cookies", "ecommerce", "acquisition", "events", "users", "sessions", "monitoring"]
     
@@ -98,7 +121,6 @@ def main():
     
     for tab, tab_id in zip(tabs, tab_ids):
         with tab:
-            # Título más compacto dentro de cada tab
             if tab_id == "cookies":
                 show_cookies_tab(client, selected_project, selected_dataset, start_date, end_date)
             elif tab_id == "ecommerce":
@@ -112,7 +134,7 @@ def main():
             elif tab_id == "sessions":
                 show_sessions_tab(client, selected_project, selected_dataset, start_date, end_date)
             elif tab_id == "monitoring":
-                show_monitoring_tab(client, selected_project)  # NUEVO
+                show_monitoring_tab(client, selected_project)
     
     # Footer profesional
     st.divider()
@@ -124,5 +146,21 @@ def main():
     with footer_col3:
         st.caption(f"v1.0.0")
 
-if __name__ == "__main__":
-    main()
+def render_header():
+    """Renderiza el header con información del usuario y logout"""
+    col1, col2, col3 = st.columns([1, 3, 1])
+    
+    with col1:
+        try:
+            st.image("assets/logo.png", width=150)
+        except:
+            st.markdown("### FLAT 101")
+    
+    with col2:
+        st.title("🛡️ BigQuery Shield")
+        st.markdown("**Plataforma de análisis avanzado para Google Analytics 4**")
+    
+    with col3:
+        # Mostrar info del usuario
+        user_info = SessionManager.get_user_info()
+        auth_method = SessionManager.get_auth_method()
