@@ -62,21 +62,44 @@ def show_login_screen():
         st.markdown("Accede usando tu cuenta de Google con permisos en BigQuery")
         
         if oauth_available:
-            # Crear dos columnas para los botones
-            col1, col2 = st.columns(2)
+            # Al hacer click, mostrar el botón de redirect
+            if st.button("🚀 Login con Google", use_container_width=True, type="primary", key="oauth_login_btn"):
+                st.session_state['show_oauth_redirect'] = True
             
-            with col1:
-                if st.button("🚀 Login con Google", use_container_width=True, type="primary", key="oauth_login_btn"):
-                    handle_oauth_login()
+            # Mostrar el link de redirect si se hizo click
+            if st.session_state.get('show_oauth_redirect', False):
+                try:
+                    oauth_config = AuthConfig.get_oauth_config()
+                    
+                    oauth_handler = OAuthHandler(
+                        client_id=oauth_config['client_id'],
+                        client_secret=oauth_config['client_secret'],
+                        redirect_uri=oauth_config['redirect_uri'],
+                        scopes=AuthConfig.SCOPES
+                    )
+                    
+                    authorization_url = oauth_handler.get_authorization_url()
+                    
+                    st.info("👇 Haz click en el botón para iniciar sesión con Google")
+                    
+                    st.link_button(
+                        "🔐 Continuar a Google",
+                        authorization_url,
+                        use_container_width=True,
+                        type="primary"
+                    )
+                    
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
             
-            with col2:
-                # Botón de ayuda/debug
-                if st.button("🔧 Debug OAuth", use_container_width=True, key="debug_oauth_btn"):
-                    st.switch_page("pages/debug_oauth.py")
+            # Botón de debug en columna aparte
+            if st.button("🔧 ¿Problemas? Ver Debug", use_container_width=True, key="debug_oauth_btn"):
+                st.markdown('<meta http-equiv="refresh" content="0; url=/debug_oauth" />', unsafe_allow_html=True)
+                
         else:
             st.warning("⚠️ OAuth no configurado. Contacta al administrador.")
             if st.button("🔧 Ver Debug", use_container_width=True):
-                st.switch_page("pages/debug_oauth.py")
+                st.markdown('<meta http-equiv="refresh" content="0; url=/debug_oauth" />', unsafe_allow_html=True)
     
     st.divider()
     
