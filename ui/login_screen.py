@@ -135,37 +135,6 @@ def show_login_screen():
     st.divider()
     st.caption("© 2025 FLAT 101 Digital Business | BigQuery Shield v1.0")
 
-def handle_oauth_login():
-    """Inicia el flujo de OAuth - Redirige usando link_button"""
-    try:
-        oauth_config = AuthConfig.get_oauth_config()
-        
-        oauth_handler = OAuthHandler(
-            client_id=oauth_config['client_id'],
-            client_secret=oauth_config['client_secret'],
-            redirect_uri=oauth_config['redirect_uri'],
-            scopes=AuthConfig.SCOPES
-        )
-        
-        # Generar URL de autorización
-        authorization_url = oauth_handler.get_authorization_url()
-        
-        # Usar st.link_button para redirigir en la misma ventana
-        st.link_button(
-            "🔐 Continuar con Google",
-            authorization_url,
-            use_container_width=True,
-            type="primary"
-        )
-        
-        st.info("👆 Haz click en el botón para iniciar sesión con Google")
-        
-    except Exception as e:
-        st.error(f"❌ Error iniciando OAuth: {str(e)}")
-        with st.expander("🔍 Ver detalles del error"):
-            import traceback
-            st.code(traceback.format_exc())
-
 def handle_oauth_callback():
     """
     Maneja el callback de OAuth después del login
