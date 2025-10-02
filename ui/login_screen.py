@@ -56,33 +56,48 @@ def show_login_screen():
     st.markdown("## Selecciona cómo conectarte:")
     st.markdown("")
     
-    # OPCIÓN 1: OAuth Login con Google - VERSIÓN SIMPLIFICADA
+    # OPCIÓN 1: OAuth Login con Google - CON ENLACE HTML DIRECTO
     with st.container():
         st.markdown("### 🔐 Login con Google")
         st.markdown("Accede usando tu cuenta de Google con permisos en BigQuery")
         
         if oauth_available:
-            # Un solo botón que hace todo
-            if st.button("🚀 Login con Google", use_container_width=True, type="primary", key="oauth_login_btn"):
-                try:
-                    oauth_config = AuthConfig.get_oauth_config()
-                    
-                    oauth_handler = OAuthHandler(
-                        client_id=oauth_config['client_id'],
-                        client_secret=oauth_config['client_secret'],
-                        redirect_uri=oauth_config['redirect_uri'],
-                        scopes=AuthConfig.SCOPES
-                    )
-                    
-                    authorization_url = oauth_handler.get_authorization_url()
-                    
-                    # Redirigir directamente con meta refresh
-                    st.markdown(f'<meta http-equiv="refresh" content="0;url={authorization_url}">', unsafe_allow_html=True)
-                    st.info("🔄 Redirigiendo a Google...")
-                    st.stop()
-                    
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
+            # Generar la URL de autorización
+            try:
+                oauth_config = AuthConfig.get_oauth_config()
+                
+                oauth_handler = OAuthHandler(
+                    client_id=oauth_config['client_id'],
+                    client_secret=oauth_config['client_secret'],
+                    redirect_uri=oauth_config['redirect_uri'],
+                    scopes=AuthConfig.SCOPES
+                )
+                
+                authorization_url = oauth_handler.get_authorization_url()
+                
+                # Botón como enlace HTML (funciona en todos los navegadores)
+                st.markdown(f"""
+                <a href="{authorization_url}" target="_self">
+                    <button style="
+                        background-color: #4285F4;
+                        color: white;
+                        padding: 12px 24px;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 16px;
+                        font-weight: 500;
+                        width: 100%;
+                        margin: 8px 0;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                    ">
+                        🚀 Login con Google
+                    </button>
+                </a>
+                """, unsafe_allow_html=True)
+                
+            except Exception as e:
+                st.error(f"❌ Error generando URL de login: {str(e)}")
             
             # Botón de debug
             if st.button("🔧 ¿Problemas? Ver Debug", use_container_width=True, key="debug_oauth_btn"):
