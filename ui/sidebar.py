@@ -5,7 +5,7 @@ from database.connection import get_bq_client
 from utils.error_handling import handle_bq_error
 
 def render_sidebar():
-    """Renderiza la barra lateral con configuración - Versión profesional"""
+    """Renderiza la barra lateral con configuración - Versión sin credenciales"""
     with st.sidebar:
         # Logo en sidebar
         try:
@@ -15,20 +15,8 @@ def render_sidebar():
         
         st.divider()
         
-        # Configuración de credenciales (colapsado por defecto)
-        with st.expander("🔐 Configuración de Acceso", expanded=False):
-            development_mode = st.toggle("Modo desarrollo (usar JSON local)")
-            
-            if development_mode:
-                creds_file = st.file_uploader("Sube credenciales JSON", type=["json"])
-                if creds_file:
-                    with open("temp_creds.json", "wb") as f:
-                        f.write(creds_file.getvalue())
-                    st.session_state.creds = "temp_creds.json"
-                    st.success("✓ Credenciales cargadas")
-            elif "gcp_service_account" not in st.secrets:
-                st.error("⚠️ Configura los Secrets en Streamlit Cloud")
-                st.stop()
+        # SECCIÓN DE CREDENCIALES ELIMINADA - Ya no es necesaria
+        # El usuario ya está autenticado desde el login
         
         # Rango de fechas más visible
         st.markdown("### 📅 Período de Análisis")
@@ -69,10 +57,11 @@ def render_sidebar():
         st.caption("**BigQuery Shield v1.0**")
         st.caption("Powered by FLAT 101")
     
-    return development_mode, start_date, end_date
+    # Ya no devuelve development_mode, ese concepto se elimina
+    return False, start_date, end_date
 
 def get_project_dataset_selection(client):
-    """Obtiene la selección de proyecto y dataset - Versión mejorada"""
+    """Obtiene la selección de proyecto y dataset - Sin cambios"""
     try:
         st.sidebar.markdown("### 🗄️ Fuente de Datos")
         
