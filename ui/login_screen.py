@@ -56,18 +56,14 @@ def show_login_screen():
     st.markdown("## Selecciona cómo conectarte:")
     st.markdown("")
     
-    # OPCIÓN 1: OAuth Login con Google - VERSIÓN PROFESIONAL
+    # OPCIÓN 1: OAuth Login con Google - VERSIÓN SIMPLIFICADA
     with st.container():
         st.markdown("### 🔐 Login con Google")
         st.markdown("Accede usando tu cuenta de Google con permisos en BigQuery")
         
         if oauth_available:
-            # Al hacer click, mostrar el botón de redirect
+            # Un solo botón que hace todo
             if st.button("🚀 Login con Google", use_container_width=True, type="primary", key="oauth_login_btn"):
-                st.session_state['show_oauth_redirect'] = True
-            
-            # Mostrar el link de redirect si se hizo click
-            if st.session_state.get('show_oauth_redirect', False):
                 try:
                     oauth_config = AuthConfig.get_oauth_config()
                     
@@ -80,26 +76,42 @@ def show_login_screen():
                     
                     authorization_url = oauth_handler.get_authorization_url()
                     
-                    st.info("👇 Haz click en el botón para iniciar sesión con Google")
-                    
-                    st.link_button(
-                        "🔐 Continuar a Google",
-                        authorization_url,
-                        use_container_width=True,
-                        type="primary"
+                    # Redirigir directamente usando JavaScript
+                    st.components.v1.html(
+                        f"""
+                        <script>
+                            window.parent.location.href = "{authorization_url}";
+                        </script>
+                        """,
+                        height=0,
                     )
                     
                 except Exception as e:
                     st.error(f"❌ Error: {str(e)}")
             
-            # Botón de debug en columna aparte
+            # Botón de debug
             if st.button("🔧 ¿Problemas? Ver Debug", use_container_width=True, key="debug_oauth_btn"):
-                st.markdown('<meta http-equiv="refresh" content="0; url=/debug_oauth" />', unsafe_allow_html=True)
+                # Usar JavaScript para navegar sin abrir nueva pestaña
+                st.components.v1.html(
+                    """
+                    <script>
+                        window.parent.location.href = "/debug_oauth";
+                    </script>
+                    """,
+                    height=0,
+                )
                 
         else:
             st.warning("⚠️ OAuth no configurado. Contacta al administrador.")
             if st.button("🔧 Ver Debug", use_container_width=True):
-                st.markdown('<meta http-equiv="refresh" content="0; url=/debug_oauth" />', unsafe_allow_html=True)
+                st.components.v1.html(
+                    """
+                    <script>
+                        window.parent.location.href = "/debug_oauth";
+                    </script>
+                    """,
+                    height=0,
+                )
     
     st.divider()
     
