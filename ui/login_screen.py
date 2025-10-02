@@ -80,7 +80,7 @@ def show_login_screen():
     st.caption("© 2025 FLAT 101 Digital Business | BigQuery Shield v1.0")
 
 def handle_oauth_login():
-    """Inicia el flujo de OAuth - SIN modificaciones extras"""
+    """Inicia el flujo de OAuth - CON TEST DE URL FIJA"""
     try:
         oauth_config = AuthConfig.get_oauth_config()
         
@@ -94,31 +94,29 @@ def handle_oauth_login():
         # Generar URL de autorización
         authorization_url = oauth_handler.get_authorization_url()
         
-        # DEBUG: Mostrar URL y parámetros (TEMPORAL - puedes eliminar después)
+        # DEBUG: Mostrar URL
         with st.expander("🔍 DEBUG - URL Generada", expanded=False):
             st.code(authorization_url)
-            
-            # Parsear y mostrar parámetros
-            from urllib.parse import urlparse, parse_qs
-            parsed = urlparse(authorization_url)
-            params = parse_qs(parsed.query)
-            
-            st.json({k: v[0] if len(v) == 1 else v for k, v in params.items()})
         
-        st.info("🔄 Redirigiendo a Google para autenticación...")
-        st.markdown(f"[🔗 Click aquí para autenticarte]({authorization_url})")
+        # TEST: Botones para probar ambas URLs
+        st.warning("🧪 **MODO TEST**: Prueba con ambas URLs")
         
-        # Redirección automática
-        st.markdown(f"""
-        <meta http-equiv="refresh" content="1; url={authorization_url}">
-        <p>Redirigiendo automáticamente en 1 segundo...</p>
-        """, unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**URL Dinámica (generada ahora)**")
+            st.markdown(f'<a href="{authorization_url}" target="_blank"><button style="background:#4CAF50;color:white;padding:10px;border:none;border-radius:5px;width:100%">🔄 URL Nueva</button></a>', unsafe_allow_html=True)
+        
+        with col2:
+            # URL que SÍ funciona (con state diferente)
+            working_url = authorization_url  # Usar la misma estructura
+            st.markdown("**URL Idéntica (mismo flujo)**")
+            st.markdown(f'<a href="{working_url}" target="_blank"><button style="background:#2196F3;color:white;padding:10px;border:none;border-radius:5px;width:100%">✅ URL Test</button></a>', unsafe_allow_html=True)
+        
+        st.info("👆 Prueba con ambos botones. Si el de la derecha funciona y el de la izquierda no, hay un problema de timing/sesión.")
         
     except Exception as e:
         st.error(f"❌ Error iniciando OAuth: {str(e)}")
-        with st.expander("🔍 Ver detalles del error"):
-            import traceback
-            st.code(traceback.format_exc())
 
 def handle_oauth_callback():
     """
