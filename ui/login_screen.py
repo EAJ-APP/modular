@@ -80,7 +80,7 @@ def show_login_screen():
     st.caption("© 2025 FLAT 101 Digital Business | BigQuery Shield v1.0")
 
 def handle_oauth_login():
-    """Inicia el flujo de OAuth"""
+    """Inicia el flujo de OAuth - SIN modificaciones extras"""
     try:
         oauth_config = AuthConfig.get_oauth_config()
         
@@ -91,27 +91,39 @@ def handle_oauth_login():
             scopes=AuthConfig.SCOPES
         )
         
+        # Generar URL de autorización
         authorization_url = oauth_handler.get_authorization_url()
         
-        # Añadir parámetro para forzar nueva autorización
-        authorization_url += "&prompt=consent"
+        # DEBUG: Mostrar URL y parámetros (TEMPORAL - puedes eliminar después)
+        with st.expander("🔍 DEBUG - URL Generada", expanded=False):
+            st.code(authorization_url)
+            
+            # Parsear y mostrar parámetros
+            from urllib.parse import urlparse, parse_qs
+            parsed = urlparse(authorization_url)
+            params = parse_qs(parsed.query)
+            
+            st.json({k: v[0] if len(v) == 1 else v for k, v in params.items()})
         
         st.info("🔄 Redirigiendo a Google para autenticación...")
         st.markdown(f"[🔗 Click aquí para autenticarte]({authorization_url})")
         
-        # Redirección con meta refresh
+        # Redirección automática
         st.markdown(f"""
-        <meta http-equiv="refresh" content="0; url={authorization_url}">
-        <p>Si no se redirige automáticamente, <a href="{authorization_url}">click aquí</a></p>
+        <meta http-equiv="refresh" content="1; url={authorization_url}">
+        <p>Redirigiendo automáticamente en 1 segundo...</p>
         """, unsafe_allow_html=True)
         
     except Exception as e:
         st.error(f"❌ Error iniciando OAuth: {str(e)}")
+        with st.expander("🔍 Ver detalles del error"):
+            import traceback
+            st.code(traceback.format_exc())
 
 def handle_oauth_callback():
     """
     Maneja el callback de OAuth después del login
-    VERSIÓN MEJORADA: Usa petición HTTP directa para evitar problemas de scope
+    Usa petición HTTP directa para evitar problemas de validación de scopes
     """
     query_params = st.query_params
     
@@ -125,11 +137,9 @@ def handle_oauth_callback():
             try:
                 oauth_config = AuthConfig.get_oauth_config()
                 
-                # MÉTODO DIRECTO: Intercambiar código por token usando requests
-                # Esto evita los problemas de validación de scopes de oauthlib
-                
                 st.write("🔄 Obteniendo token de acceso...")
                 
+                # Intercambiar código por token usando petición HTTP directa
                 token_response = requests.post(
                     'https://oauth2.googleapis.com/token',
                     data={
@@ -151,11 +161,10 @@ def handle_oauth_callback():
                 
                 st.write("✅ Token obtenido correctamente")
                 
-                # Crear credenciales manualmente desde el token
+                # Crear credenciales manualmente
                 from google.oauth2.credentials import Credentials
                 from datetime import datetime, timedelta
                 
-                # Calcular expiry (por defecto 1 hora)
                 expiry = datetime.utcnow() + timedelta(seconds=token_data.get('expires_in', 3600))
                 
                 credentials = Credentials(
