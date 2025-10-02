@@ -44,15 +44,6 @@ def show_login_screen():
                 handle_oauth_login()
         else:
             st.warning("⚠️ OAuth no configurado. Contacta al administrador.")
-            with st.expander("ℹ️ Información para administradores"):
-                st.code("""
-# Añade esto a tus secrets de Streamlit:
-
-[oauth]
-client_id = "TU_CLIENT_ID.apps.googleusercontent.com"
-client_secret = "TU_CLIENT_SECRET"
-redirect_uri = "https://TU-APP.streamlit.app"
-                """)
     
     st.divider()
     
@@ -83,11 +74,6 @@ redirect_uri = "https://TU-APP.streamlit.app"
                 handle_secrets_login()
         else:
             st.warning("⚠️ Service Account no configurado en secrets.")
-            with st.expander("ℹ️ Información para administradores"):
-                st.code("""
-# Añade [gcp_service_account] a tus secrets de Streamlit
-# con la configuración de tu service account
-                """)
     
     # Footer
     st.divider()
@@ -107,10 +93,13 @@ def handle_oauth_login():
         
         authorization_url = oauth_handler.get_authorization_url()
         
+        # Añadir parámetro para forzar nueva autorización
+        authorization_url += "&prompt=consent"
+        
         st.info("🔄 Redirigiendo a Google para autenticación...")
         st.markdown(f"[🔗 Click aquí para autenticarte]({authorization_url})")
         
-        # Redirección con meta refresh (más compatible)
+        # Redirección con meta refresh
         st.markdown(f"""
         <meta http-equiv="refresh" content="0; url={authorization_url}">
         <p>Si no se redirige automáticamente, <a href="{authorization_url}">click aquí</a></p>
@@ -118,15 +107,12 @@ def handle_oauth_login():
         
     except Exception as e:
         st.error(f"❌ Error iniciando OAuth: {str(e)}")
-        with st.expander("🔍 Ver detalles del error"):
-            st.code(str(e))
 
 def handle_oauth_callback():
     """
     Maneja el callback de OAuth después del login
-    Returns True si hubo un callback exitoso
+    VERSIÓN MEJORADA: Usa petición HTTP directa para evitar problemas de scope
     """
-    # Obtener parámetros de la URL
     query_params = st.query_params
     
     # Debug: Mostrar parámetros recibidos
@@ -139,58 +125,69 @@ def handle_oauth_callback():
             try:
                 oauth_config = AuthConfig.get_oauth_config()
                 
-                # Crear handler
-                oauth_handler = OAuthHandler(
-                    client_id=oauth_config['client_id'],
-                    client_secret=oauth_config['client_secret'],
-                    redirect_uri=oauth_config['redirect_uri'],
-                    scopes=AuthConfig.SCOPES
+                # MÉTODO DIRECTO: Intercambiar código por token usando requests
+                # Esto evita los problemas de validación de scopes de oauthlib
+                
+                st.write("🔄 Obteniendo token de acceso...")
+                
+                token_response = requests.post(
+                    'https://oauth2.googleapis.com/token',
+                    data={
+                        'code': query_params['code'],
+                        'client_id': oauth_config['client_id'],
+                        'client_secret': oauth_config['client_secret'],
+                        'redirect_uri': oauth_config['redirect_uri'],
+                        'grant_type': 'authorization_code'
+                    },
+                    headers={'Content-Type': 'application/x-www-form-urlencoded'}
                 )
                 
-                # CORRECCIÓN CRÍTICA: Usar solo el código, no construir URL completa
-                # El método fetch_token de google-auth-oauthlib necesita solo authorization_response
-                
-                # Construir la URL de callback COMPLETA como la recibió Google
-                from urllib.parse import urlencode
-                
-                # Obtener la URL base actual
-                import streamlit.web.bootstrap as bootstrap
-                
-                # Método alternativo: usar solo el código directamente
-                flow = oauth_handler.create_flow()
-                
-                # Fetch token usando el authorization response completo
-                # Necesitamos reconstruir la URL completa con todos los parámetros
-                params = dict(query_params)
-                authorization_response = f"{oauth_config['redirect_uri']}?{urlencode(params)}"
-                
-                st.write("🔍 **Debug**: URL de callback construida:")
-                st.code(authorization_response)
-                
-                # Intentar obtener el token
-                flow.fetch_token(authorization_response=authorization_response)
-                credentials = flow.credentials
-                
-                if credentials:
-                    # Obtener info del usuario
-                    user_info = get_user_info_from_token(credentials.token)
-                    
-                    # Configurar sesión
-                    SessionManager.set_oauth_session(credentials, user_info)
-                    
-                    # Limpiar query params
-                    st.query_params.clear()
-                    
-                    st.success(f"✅ Bienvenido, {user_info.get('name', 'Usuario')}!")
-                    st.balloons()
-                    
-                    # Recargar para ir a la app principal
-                    st.rerun()
-                    return True
-                else:
-                    st.error("❌ Error obteniendo credenciales")
+                if token_response.status_code != 200:
+                    st.error(f"❌ Error obteniendo token: {token_response.status_code}")
+                    st.code(token_response.text)
                     return False
-                    
+                
+                token_data = token_response.json()
+                
+                st.write("✅ Token obtenido correctamente")
+                
+                # Crear credenciales manualmente desde el token
+                from google.oauth2.credentials import Credentials
+                from datetime import datetime, timedelta
+                
+                # Calcular expiry (por defecto 1 hora)
+                expiry = datetime.utcnow() + timedelta(seconds=token_data.get('expires_in', 3600))
+                
+                credentials = Credentials(
+                    token=token_data['access_token'],
+                    refresh_token=token_data.get('refresh_token'),
+                    token_uri='https://oauth2.googleapis.com/token',
+                    client_id=oauth_config['client_id'],
+                    client_secret=oauth_config['client_secret'],
+                    scopes=token_data.get('scope', '').split(),
+                    expiry=expiry
+                )
+                
+                st.write("✅ Credenciales creadas")
+                
+                # Obtener info del usuario
+                user_info = get_user_info_from_token(credentials.token)
+                
+                st.write(f"✅ Usuario identificado: {user_info.get('name', 'Usuario')}")
+                
+                # Configurar sesión
+                SessionManager.set_oauth_session(credentials, user_info)
+                
+                # Limpiar query params
+                st.query_params.clear()
+                
+                st.success(f"✅ Bienvenido, {user_info.get('name', 'Usuario')}!")
+                st.balloons()
+                
+                # Recargar para ir a la app principal
+                st.rerun()
+                return True
+                
             except Exception as e:
                 st.error(f"❌ Error en callback OAuth: {str(e)}")
                 with st.expander("🔍 Ver detalles técnicos"):
@@ -226,10 +223,8 @@ def get_user_info_from_token(access_token: str) -> dict:
 def handle_json_upload(uploaded_file):
     """Maneja la subida de archivo JSON"""
     try:
-        # Leer archivo JSON
         credentials_dict = json.load(uploaded_file)
         
-        # Validar que sea un service account válido
         required_fields = ['type', 'project_id', 'private_key', 'client_email']
         if not all(field in credentials_dict for field in required_fields):
             st.error("❌ JSON inválido. Asegúrate de usar un Service Account JSON válido.")
@@ -239,16 +234,11 @@ def handle_json_upload(uploaded_file):
             st.error("❌ El archivo debe ser de tipo 'service_account'")
             return
         
-        # Crear credenciales
         credentials = service_account.Credentials.from_service_account_info(credentials_dict)
-        
-        # Configurar sesión
         SessionManager.set_service_account_session(credentials, method='json')
         
         st.success(f"✅ Conectado como: {credentials.service_account_email}")
         st.balloons()
-        
-        # Recargar para ir a la app principal
         st.rerun()
         
     except json.JSONDecodeError:
@@ -259,17 +249,12 @@ def handle_json_upload(uploaded_file):
 def handle_secrets_login():
     """Maneja el login usando secrets configurados"""
     try:
-        # Obtener credenciales desde secrets
         creds_dict = dict(st.secrets["gcp_service_account"])
         credentials = service_account.Credentials.from_service_account_info(creds_dict)
-        
-        # Configurar sesión
         SessionManager.set_service_account_session(credentials, method='secrets')
         
         st.success(f"✅ Conectado como: {credentials.service_account_email}")
         st.balloons()
-        
-        # Recargar para ir a la app principal
         st.rerun()
         
     except Exception as e:
