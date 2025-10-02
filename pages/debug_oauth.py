@@ -29,16 +29,23 @@ with col1:
     st.title("🔬 Diagnóstico de Autenticación OAuth")
     st.caption("Herramienta de diagnóstico para resolver problemas de autenticación con Google Cloud")
 with col2:
-    # Botón usando componente HTML con JavaScript
-    if st.button("🏠 Volver al Login", use_container_width=True):
-        st.components.v1.html(
-            """
-            <script>
-                window.parent.location.href = "/";
-            </script>
-            """,
-            height=0,
-        )
+    # Botón con enlace directo a la raíz
+    st.markdown("""
+    <a href="/" target="_self">
+        <button style="
+            background-color:#1976D2;
+            color:white;
+            padding:8px 16px;
+            border:none;
+            border-radius:4px;
+            cursor:pointer;
+            font-size:14px;
+            width:100%;
+        ">
+            🏠 Volver al Login
+        </button>
+    </a>
+    """, unsafe_allow_html=True)
 
 st.divider()
 
