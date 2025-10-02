@@ -5,14 +5,38 @@ from typing import Dict
 
 st.set_page_config(page_title="Debug OAuth - BigQuery Shield", layout="wide", page_icon="🔬")
 
+# CSS para ocultar el sidebar y menú
+st.markdown("""
+    <style>
+        [data-testid="stSidebar"] {
+            display: none;
+        }
+        [data-testid="collapsedControl"] {
+            display: none;
+        }
+        .stDeployButton {
+            display: none;
+        }
+        #MainMenu {
+            display: none;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # Header profesional
 col1, col2 = st.columns([3, 1])
 with col1:
     st.title("🔬 Diagnóstico de Autenticación OAuth")
     st.caption("Herramienta de diagnóstico para resolver problemas de autenticación con Google Cloud")
 with col2:
-    if st.button("🏠 Volver al Login", use_container_width=True):
-        st.switch_page("main.py")
+    # Usar link para volver sin abrir nueva pestaña
+    st.markdown("""
+        <a href="/" style="text-decoration: none;">
+            <button style="background-color:#2196F3; color:white; padding:10px 20px; border:none; border-radius:8px; cursor:pointer; width:100%;">
+                🏠 Volver al Login
+            </button>
+        </a>
+    """, unsafe_allow_html=True)
 
 st.divider()
 
