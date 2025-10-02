@@ -22,6 +22,10 @@ def show_login_screen():
     
     st.divider()
     
+    # IMPORTANTE: Manejar callback ANTES de mostrar opciones
+    if handle_oauth_callback():
+        return  # Si hay callback exitoso, no mostrar el resto
+    
     # Verificar qué métodos están disponibles
     oauth_available = AuthConfig.is_oauth_configured()
     secrets_available = AuthConfig.is_secrets_configured()
@@ -88,9 +92,6 @@ redirect_uri = "https://TU-APP.streamlit.app"
     # Footer
     st.divider()
     st.caption("© 2025 FLAT 101 Digital Business | BigQuery Shield v1.0")
-    
-    # Manejar callback de OAuth si existe
-    handle_oauth_callback()
 
 def handle_oauth_login():
     """Inicia el flujo de OAuth"""
@@ -107,28 +108,38 @@ def handle_oauth_login():
         authorization_url = oauth_handler.get_authorization_url()
         
         st.info("🔄 Redirigiendo a Google para autenticación...")
-        st.markdown(f"[🔗 Click aquí si no se redirige automáticamente]({authorization_url})")
+        st.markdown(f"[🔗 Click aquí para autenticarte]({authorization_url})")
         
-        # JavaScript para redirección automática
-        st.components.v1.html(f"""
-            <script>
-                window.location.href = "{authorization_url}";
-            </script>
-        """, height=0)
+        # Redirección con meta refresh (más compatible)
+        st.markdown(f"""
+        <meta http-equiv="refresh" content="0; url={authorization_url}">
+        <p>Si no se redirige automáticamente, <a href="{authorization_url}">click aquí</a></p>
+        """, unsafe_allow_html=True)
         
     except Exception as e:
         st.error(f"❌ Error iniciando OAuth: {str(e)}")
+        with st.expander("🔍 Ver detalles del error"):
+            st.code(str(e))
 
 def handle_oauth_callback():
-    """Maneja el callback de OAuth después del login"""
+    """
+    Maneja el callback de OAuth después del login
+    Returns True si hubo un callback exitoso
+    """
     # Obtener parámetros de la URL
     query_params = st.query_params
+    
+    # Debug: Mostrar parámetros recibidos
+    if len(query_params) > 0:
+        with st.expander("🔍 Debug - Parámetros recibidos"):
+            st.json(dict(query_params))
     
     if 'code' in query_params:
         with st.spinner("🔄 Completando autenticación..."):
             try:
                 oauth_config = AuthConfig.get_oauth_config()
                 
+                # Crear handler
                 oauth_handler = OAuthHandler(
                     client_id=oauth_config['client_id'],
                     client_secret=oauth_config['client_secret'],
@@ -136,14 +147,29 @@ def handle_oauth_callback():
                     scopes=AuthConfig.SCOPES
                 )
                 
-                # Construir URL de callback completa
-                # Nota: En Streamlit Cloud esto puede requerir ajustes
-                callback_url = f"{oauth_config['redirect_uri']}?code={query_params['code']}"
-                if 'state' in query_params:
-                    callback_url += f"&state={query_params['state']}"
+                # CORRECCIÓN CRÍTICA: Usar solo el código, no construir URL completa
+                # El método fetch_token de google-auth-oauthlib necesita solo authorization_response
                 
-                # Obtener credenciales
-                credentials = oauth_handler.handle_oauth_callback(callback_url)
+                # Construir la URL de callback COMPLETA como la recibió Google
+                from urllib.parse import urlencode
+                
+                # Obtener la URL base actual
+                import streamlit.web.bootstrap as bootstrap
+                
+                # Método alternativo: usar solo el código directamente
+                flow = oauth_handler.create_flow()
+                
+                # Fetch token usando el authorization response completo
+                # Necesitamos reconstruir la URL completa con todos los parámetros
+                params = dict(query_params)
+                authorization_response = f"{oauth_config['redirect_uri']}?{urlencode(params)}"
+                
+                st.write("🔍 **Debug**: URL de callback construida:")
+                st.code(authorization_response)
+                
+                # Intentar obtener el token
+                flow.fetch_token(authorization_response=authorization_response)
+                credentials = flow.credentials
                 
                 if credentials:
                     # Obtener info del usuario
@@ -160,12 +186,25 @@ def handle_oauth_callback():
                     
                     # Recargar para ir a la app principal
                     st.rerun()
+                    return True
                 else:
                     st.error("❌ Error obteniendo credenciales")
+                    return False
                     
             except Exception as e:
-                st.error(f"❌ Error en callback: {str(e)}")
-                st.query_params.clear()
+                st.error(f"❌ Error en callback OAuth: {str(e)}")
+                with st.expander("🔍 Ver detalles técnicos"):
+                    import traceback
+                    st.code(traceback.format_exc())
+                
+                # Botón para limpiar y volver a intentar
+                if st.button("🔄 Volver a intentar"):
+                    st.query_params.clear()
+                    st.rerun()
+                
+                return False
+    
+    return False
 
 def get_user_info_from_token(access_token: str) -> dict:
     """Obtiene información del usuario desde el token de acceso"""
