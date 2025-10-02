@@ -76,42 +76,22 @@ def show_login_screen():
                     
                     authorization_url = oauth_handler.get_authorization_url()
                     
-                    # Redirigir directamente usando JavaScript
-                    st.components.v1.html(
-                        f"""
-                        <script>
-                            window.parent.location.href = "{authorization_url}";
-                        </script>
-                        """,
-                        height=0,
-                    )
+                    # Redirigir directamente con meta refresh
+                    st.markdown(f'<meta http-equiv="refresh" content="0;url={authorization_url}">', unsafe_allow_html=True)
+                    st.info("🔄 Redirigiendo a Google...")
+                    st.stop()
                     
                 except Exception as e:
                     st.error(f"❌ Error: {str(e)}")
             
             # Botón de debug
             if st.button("🔧 ¿Problemas? Ver Debug", use_container_width=True, key="debug_oauth_btn"):
-                # Usar JavaScript para navegar sin abrir nueva pestaña
-                st.components.v1.html(
-                    """
-                    <script>
-                        window.parent.location.href = "/debug_oauth";
-                    </script>
-                    """,
-                    height=0,
-                )
+                st.switch_page("pages/debug_oauth.py")
                 
         else:
             st.warning("⚠️ OAuth no configurado. Contacta al administrador.")
             if st.button("🔧 Ver Debug", use_container_width=True):
-                st.components.v1.html(
-                    """
-                    <script>
-                        window.parent.location.href = "/debug_oauth";
-                    </script>
-                    """,
-                    height=0,
-                )
+                st.switch_page("pages/debug_oauth.py")
     
     st.divider()
     
