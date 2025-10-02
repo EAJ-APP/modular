@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 import json
 from typing import Optional, Dict
 
+# ... resto del código
+
 class OAuthHandler:
     """Manejador de autenticación OAuth con Google"""
     
