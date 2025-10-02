@@ -5,14 +5,21 @@ from utils.error_handling import handle_bq_error
 from utils.bq_monitoring import get_query_statistics, bytes_to_readable
 
 def get_bq_client(credentials_path=None):
-    """Crea cliente de BigQuery con manejo de errores simple"""
+    """
+    FUNCIÓN DEPRECADA - Mantener por compatibilidad
+    Usar SessionManager.get_bigquery_client() en su lugar
+    """
+    # Esta función ya no se usa en el flujo principal
+    # Se mantiene por si algún código legacy la llama
     try:
         if credentials_path:
             credentials = service_account.Credentials.from_service_account_file(credentials_path)
+            return bigquery.Client(credentials=credentials)
         else:
+            # Intentar obtener de secrets (compatibilidad)
             creds_dict = dict(st.secrets["gcp_service_account"])
             credentials = service_account.Credentials.from_service_account_info(creds_dict)
-        return bigquery.Client(credentials=credentials, project=creds_dict.get("project_id"))
+            return bigquery.Client(credentials=credentials, project=creds_dict.get("project_id"))
     except Exception as e:
         handle_bq_error(e)
 
@@ -21,7 +28,7 @@ def run_query(client, query, timeout=30, show_stats=False):
     Ejecuta consulta en BigQuery - Con monitorización de consumo
     
     Args:
-        client: Cliente de BigQuery
+        client: Cliente de BigQuery (obtenido de SessionManager)
         query: Consulta SQL a ejecutar
         timeout: Timeout en segundos (default: 30)
         show_stats: Si True, muestra estadísticas de consumo (default: False)
@@ -83,7 +90,7 @@ def run_query_with_estimate(client, query, timeout=30):
     Ejecuta consulta mostrando PRIMERO la estimación de consumo
     
     Args:
-        client: Cliente de BigQuery
+        client: Cliente de BigQuery (obtenido de SessionManager)
         query: Consulta SQL a ejecutar
         timeout: Timeout en segundos (default: 30)
         
