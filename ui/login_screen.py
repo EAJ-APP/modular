@@ -5,7 +5,7 @@ import json
 import requests
 
 def show_login_screen():
-    """Muestra la pantalla de login con las 3 opciones"""
+    """Muestra la pantalla de login profesional con las 3 opciones"""
     
     # Configurar página
     st.set_page_config(
@@ -34,16 +34,27 @@ def show_login_screen():
     st.markdown("## Selecciona cómo conectarte:")
     st.markdown("")
     
-    # OPCIÓN 1: OAuth Login con Google
+    # OPCIÓN 1: OAuth Login con Google - VERSIÓN PROFESIONAL
     with st.container():
         st.markdown("### 🔐 Login con Google")
         st.markdown("Accede usando tu cuenta de Google con permisos en BigQuery")
         
         if oauth_available:
-            if st.button("🚀 Login con Google", use_container_width=True, type="primary"):
-                handle_oauth_login()
+            # Crear dos columnas para los botones
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("🚀 Login con Google", use_container_width=True, type="primary", key="oauth_login_btn"):
+                    handle_oauth_login()
+            
+            with col2:
+                # Botón de ayuda/debug
+                if st.button("🔧 Debug OAuth", use_container_width=True, key="debug_oauth_btn"):
+                    st.switch_page("pages/debug_oauth.py")
         else:
             st.warning("⚠️ OAuth no configurado. Contacta al administrador.")
+            if st.button("🔧 Ver Debug", use_container_width=True):
+                st.switch_page("pages/debug_oauth.py")
     
     st.divider()
     
@@ -80,7 +91,7 @@ def show_login_screen():
     st.caption("© 2025 FLAT 101 Digital Business | BigQuery Shield v1.0")
 
 def handle_oauth_login():
-    """Inicia el flujo de OAuth - CON TEST DE URL FIJA"""
+    """Inicia el flujo de OAuth - SIN abrir pestaña nueva"""
     try:
         oauth_config = AuthConfig.get_oauth_config()
         
@@ -94,29 +105,36 @@ def handle_oauth_login():
         # Generar URL de autorización
         authorization_url = oauth_handler.get_authorization_url()
         
-        # DEBUG: Mostrar URL
-        with st.expander("🔍 DEBUG - URL Generada", expanded=False):
-            st.code(authorization_url)
+        # Mostrar mensaje y redirigir directamente (sin abrir nueva pestaña)
+        st.info("🔄 Redirigiendo a Google para autenticación...")
         
-        # TEST: Botones para probar ambas URLs
-        st.warning("🧪 **MODO TEST**: Prueba con ambas URLs")
+        # JavaScript para redirigir en la misma ventana
+        st.markdown(f"""
+        <script>
+            window.location.href = "{authorization_url}";
+        </script>
+        """, unsafe_allow_html=True)
         
-        col1, col2 = st.columns(2)
+        # Fallback: Si JavaScript no funciona, mostrar enlace
+        st.markdown(f"""
+        <div style="text-align: center; margin-top: 20px;">
+            <p>Si no te redirige automáticamente:</p>
+            <a href="{authorization_url}" style="text-decoration: none;">
+                <button style="background-color:#4CAF50; color:white; padding:12px 24px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
+                    🔐 Click aquí para continuar
+                </button>
+            </a>
+        </div>
+        """, unsafe_allow_html=True)
         
-        with col1:
-            st.markdown("**URL Dinámica (generada ahora)**")
-            st.markdown(f'<a href="{authorization_url}" target="_blank"><button style="background:#4CAF50;color:white;padding:10px;border:none;border-radius:5px;width:100%">🔄 URL Nueva</button></a>', unsafe_allow_html=True)
-        
-        with col2:
-            # URL que SÍ funciona (con state diferente)
-            working_url = authorization_url  # Usar la misma estructura
-            st.markdown("**URL Idéntica (mismo flujo)**")
-            st.markdown(f'<a href="{working_url}" target="_blank"><button style="background:#2196F3;color:white;padding:10px;border:none;border-radius:5px;width:100%">✅ URL Test</button></a>', unsafe_allow_html=True)
-        
-        st.info("👆 Prueba con ambos botones. Si el de la derecha funciona y el de la izquierda no, hay un problema de timing/sesión.")
+        # Detener la ejecución para evitar mostrar el resto de la página
+        st.stop()
         
     except Exception as e:
         st.error(f"❌ Error iniciando OAuth: {str(e)}")
+        with st.expander("🔍 Ver detalles del error"):
+            import traceback
+            st.code(traceback.format_exc())
 
 def handle_oauth_callback():
     """
@@ -125,8 +143,8 @@ def handle_oauth_callback():
     """
     query_params = st.query_params
     
-    # Debug: Mostrar parámetros recibidos
-    if len(query_params) > 0:
+    # Debug: Mostrar parámetros recibidos (solo en desarrollo)
+    if 'debug' in query_params and len(query_params) > 1:
         with st.expander("🔍 Debug - Parámetros recibidos"):
             st.json(dict(query_params))
     
@@ -135,7 +153,12 @@ def handle_oauth_callback():
             try:
                 oauth_config = AuthConfig.get_oauth_config()
                 
-                st.write("🔄 Obteniendo token de acceso...")
+                # Mostrar progreso
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                status_text.text("🔄 Intercambiando código por token...")
+                progress_bar.progress(25)
                 
                 # Intercambiar código por token usando petición HTTP directa
                 token_response = requests.post(
@@ -157,7 +180,8 @@ def handle_oauth_callback():
                 
                 token_data = token_response.json()
                 
-                st.write("✅ Token obtenido correctamente")
+                status_text.text("✅ Token obtenido correctamente")
+                progress_bar.progress(50)
                 
                 # Crear credenciales manualmente
                 from google.oauth2.credentials import Credentials
@@ -175,12 +199,14 @@ def handle_oauth_callback():
                     expiry=expiry
                 )
                 
-                st.write("✅ Credenciales creadas")
+                status_text.text("✅ Credenciales creadas")
+                progress_bar.progress(75)
                 
                 # Obtener info del usuario
                 user_info = get_user_info_from_token(credentials.token)
                 
-                st.write(f"✅ Usuario identificado: {user_info.get('name', 'Usuario')}")
+                status_text.text(f"✅ Usuario identificado: {user_info.get('name', 'Usuario')}")
+                progress_bar.progress(90)
                 
                 # Configurar sesión
                 SessionManager.set_oauth_session(credentials, user_info)
@@ -188,8 +214,15 @@ def handle_oauth_callback():
                 # Limpiar query params
                 st.query_params.clear()
                 
+                progress_bar.progress(100)
+                status_text.text("✅ ¡Autenticación completada!")
+                
                 st.success(f"✅ Bienvenido, {user_info.get('name', 'Usuario')}!")
                 st.balloons()
+                
+                # Pequeña espera antes de recargar
+                import time
+                time.sleep(1)
                 
                 # Recargar para ir a la app principal
                 st.rerun()
