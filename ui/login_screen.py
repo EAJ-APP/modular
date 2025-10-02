@@ -11,8 +11,30 @@ def show_login_screen():
     st.set_page_config(
         page_title="BigQuery Shield - Login",
         layout="centered",
-        page_icon="🛡️"
+        page_icon="🛡️",
+        initial_sidebar_state="collapsed"  # Ocultar sidebar por defecto
     )
+    
+    # CSS para ocultar completamente el sidebar y el menú de navegación
+    st.markdown("""
+        <style>
+            [data-testid="stSidebar"] {
+                display: none;
+            }
+            [data-testid="collapsedControl"] {
+                display: none;
+            }
+            .stDeployButton {
+                display: none;
+            }
+            #MainMenu {
+                display: none;
+            }
+            header {
+                visibility: hidden;
+            }
+        </style>
+    """, unsafe_allow_html=True)
     
     # Header con logo y título
     col1, col2, col3 = st.columns([1, 2, 1])
