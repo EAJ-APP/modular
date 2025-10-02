@@ -164,3 +164,23 @@ def render_header():
         # Mostrar info del usuario
         user_info = SessionManager.get_user_info()
         auth_method = SessionManager.get_auth_method()
+        
+        # Mostrar nombre del usuario
+        if user_info.get('name'):
+            st.markdown(f"**👤 {user_info['name']}**")
+        
+        # Mostrar método de autenticación
+        method_labels = {
+            'oauth': '🔐 OAuth',
+            'json': '📄 JSON',
+            'secrets': '🔑 Secrets'
+        }
+        st.caption(f"Método: {method_labels.get(auth_method, auth_method)}")
+        
+        # Botón de logout
+        if st.button("🚪 Cerrar Sesión", type="secondary", use_container_width=True):
+            SessionManager.logout()
+            st.rerun()
+
+if __name__ == "__main__":
+    main()
