@@ -91,7 +91,7 @@ def show_login_screen():
     st.caption("© 2025 FLAT 101 Digital Business | BigQuery Shield v1.0")
 
 def handle_oauth_login():
-    """Inicia el flujo de OAuth - SIN abrir pestaña nueva"""
+    """Inicia el flujo de OAuth - Redirige usando link_button"""
     try:
         oauth_config = AuthConfig.get_oauth_config()
         
@@ -105,30 +105,15 @@ def handle_oauth_login():
         # Generar URL de autorización
         authorization_url = oauth_handler.get_authorization_url()
         
-        # Mostrar mensaje y redirigir directamente (sin abrir nueva pestaña)
-        st.info("🔄 Redirigiendo a Google para autenticación...")
+        # Usar st.link_button para redirigir en la misma ventana
+        st.link_button(
+            "🔐 Continuar con Google",
+            authorization_url,
+            use_container_width=True,
+            type="primary"
+        )
         
-        # JavaScript para redirigir en la misma ventana
-        st.markdown(f"""
-        <script>
-            window.location.href = "{authorization_url}";
-        </script>
-        """, unsafe_allow_html=True)
-        
-        # Fallback: Si JavaScript no funciona, mostrar enlace
-        st.markdown(f"""
-        <div style="text-align: center; margin-top: 20px;">
-            <p>Si no te redirige automáticamente:</p>
-            <a href="{authorization_url}" style="text-decoration: none;">
-                <button style="background-color:#4CAF50; color:white; padding:12px 24px; border:none; border-radius:8px; cursor:pointer; font-size:16px;">
-                    🔐 Click aquí para continuar
-                </button>
-            </a>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Detener la ejecución para evitar mostrar el resto de la página
-        st.stop()
+        st.info("👆 Haz click en el botón para iniciar sesión con Google")
         
     except Exception as e:
         st.error(f"❌ Error iniciando OAuth: {str(e)}")
