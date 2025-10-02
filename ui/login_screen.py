@@ -82,9 +82,9 @@ def show_login_screen():
                     st.markdown("### 🔗 URL de Autorización:")
                     st.code(auth_url, language=None)
                     
-                    # Botón para abrir en nueva pestaña
+                    # Botón para abrir en la misma pestaña
                     st.markdown(f"""
-                    <a href="{auth_url}" target="_blank">
+                    <a href="{auth_url}" target="_self">
                         <button style="
                             background-color:#4CAF50;
                             color:white;
