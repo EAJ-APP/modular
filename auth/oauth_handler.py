@@ -39,7 +39,7 @@ class OAuthHandler:
         authorization_url, state = flow.authorization_url(
             access_type='offline',
             include_granted_scopes='true',
-            prompt='consent'  # Fuerza el consent screen cada vez
+            prompt='consent'
         )
         
         # Guardar state en session_state para validación
@@ -117,27 +117,25 @@ class OAuthHandler:
         Returns:
             Cliente de BigQuery configurado
         """
-        # Si no se proporciona project, intentar obtenerlo de las credenciales del service account
-        # o usar el primero disponible
         if not project:
             try:
                 # Intentar listar proyectos para obtener el primero disponible
-                temp_client = bigquery.Client(credentials=credentials, project='')
+                temp_client = bigquery.Client(credentials=credentials, project='dummy-project')
                 projects = list(temp_client.list_projects(max_results=1))
                 if projects:
                     project = projects[0].project_id
                 else:
-                    # Si no hay proyectos, usar uno por defecto del secrets
+                    # Fallback al proyecto del service account si está disponible
                     try:
                         project = st.secrets.get("gcp_service_account", {}).get("project_id", "ai-nibw")
                     except:
-                        project = "ai-nibw"  # Fallback al proyecto conocido
-            except Exception as e:
-                # Fallback: usar el proyecto del service account si está disponible
+                        project = "ai-nibw"
+            except Exception:
+                # Último fallback
                 try:
                     project = st.secrets.get("gcp_service_account", {}).get("project_id", "ai-nibw")
                 except:
-                    project = "ai-nibw"  # Último fallback
+                    project = "ai-nibw"
         
         return bigquery.Client(credentials=credentials, project=project)
     
