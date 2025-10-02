@@ -2,8 +2,10 @@ import streamlit as st
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from google.oauth2.credentials import Credentials
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 import json
+
+# ... resto del código
 
 class SessionManager:
     """Gestiona las sesiones de autenticación"""
