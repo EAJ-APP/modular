@@ -6,8 +6,6 @@ from datetime import datetime, timedelta
 import json
 from typing import Optional, Dict
 
-# ... resto del código
-
 class OAuthHandler:
     """Manejador de autenticación OAuth con Google"""
     
@@ -108,9 +106,40 @@ class OAuthHandler:
         )
     
     @staticmethod
-    def get_bigquery_client_from_credentials(credentials: Credentials) -> bigquery.Client:
-        """Crea un cliente de BigQuery desde las credenciales OAuth"""
-        return bigquery.Client(credentials=credentials)
+    def get_bigquery_client_from_credentials(credentials: Credentials, project: Optional[str] = None) -> bigquery.Client:
+        """
+        Crea un cliente de BigQuery desde las credenciales OAuth
+        
+        Args:
+            credentials: Credenciales OAuth de Google
+            project: Project ID (opcional, se intentará detectar automáticamente)
+            
+        Returns:
+            Cliente de BigQuery configurado
+        """
+        # Si no se proporciona project, intentar obtenerlo de las credenciales del service account
+        # o usar el primero disponible
+        if not project:
+            try:
+                # Intentar listar proyectos para obtener el primero disponible
+                temp_client = bigquery.Client(credentials=credentials, project='')
+                projects = list(temp_client.list_projects(max_results=1))
+                if projects:
+                    project = projects[0].project_id
+                else:
+                    # Si no hay proyectos, usar uno por defecto del secrets
+                    try:
+                        project = st.secrets.get("gcp_service_account", {}).get("project_id", "ai-nibw")
+                    except:
+                        project = "ai-nibw"  # Fallback al proyecto conocido
+            except Exception as e:
+                # Fallback: usar el proyecto del service account si está disponible
+                try:
+                    project = st.secrets.get("gcp_service_account", {}).get("project_id", "ai-nibw")
+                except:
+                    project = "ai-nibw"  # Último fallback
+        
+        return bigquery.Client(credentials=credentials, project=project)
     
     @staticmethod
     def is_token_expired(credentials: Credentials) -> bool:
