@@ -4,12 +4,12 @@ from typing import Dict, List, Optional
 class AuthConfig:
     """Configuración centralizada de autenticación"""
     
-    # OAuth Scopes - FORMATO CORRECTO para Google
+    # OAuth Scopes - COMPLETO para ejecutar queries
     SCOPES: List[str] = [
         'openid',
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/bigquery.readonly',
+        'https://www.googleapis.com/auth/bigquery',  # ← SCOPE COMPLETO (no solo readonly)
     ]
     
     # Métodos de autenticación disponibles
