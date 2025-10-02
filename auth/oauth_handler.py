@@ -36,13 +36,23 @@ class OAuthHandler:
     def get_authorization_url(self) -> str:
         """Genera la URL de autorización para login"""
         flow = self.create_flow()
+        
+        import time
+        import hashlib
+        
+        # Generar un nonce único basado en timestamp
+        nonce = hashlib.md5(str(time.time()).encode()).hexdigest()[:8]
+        
         authorization_url, state = flow.authorization_url(
             access_type='offline',
             include_granted_scopes='true',
-            prompt='consent'
+            prompt='consent',
+            login_hint=None,  # Forzar selección de cuenta
+            # Añadir parámetro custom para evitar caché
+            state=f"{state}_{nonce}"  # Hacer el state más único
         )
         
-        # Guardar state en session_state para validación
+        # Guardar state en session_state
         st.session_state['oauth_state'] = state
         
         return authorization_url
