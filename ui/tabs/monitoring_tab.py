@@ -1,332 +1,333 @@
 import streamlit as st
+import pandas as pd
+from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
-import pandas as pd
-from utils.bq_monitoring import bytes_to_readable
 
-def show_monitoring_tab(client, project):
-    """
-    Pestaña de Monitorización de Consumo BigQuery
-    VERSIÓN LIMITADA: Solo monitoriza sesión actual (no requiere permisos especiales)
-    """
+def show_monitoring_tab():
+    """Pestaña de Monitorización de Consultas BigQuery"""
     
-    st.subheader("📊 Monitorización de Consumo BigQuery")
+    st.title("📊 Monitorización de Consultas BigQuery")
     
-    # Aviso sobre permisos
-    st.info("""
-    ℹ️ **Monitorización en Modo Básico**
-    
-    Esta cuenta no tiene permisos para acceder al historial completo de BigQuery.
-    Mostrando solo las consultas de **esta sesión**.
-    
-    **Para habilitar monitorización completa**, el administrador de GCP debe otorgar:
-    - Rol: `BigQuery Job User` o `BigQuery Admin`
-    - Permiso: `bigquery.jobs.list`
+    st.markdown("""
+    Esta pestaña muestra información sobre las consultas ejecutadas en la sesión actual,
+    incluyendo duración, consumo de datos y estado de ejecución.
     """)
     
-    # Sección 1: Historial de Consultas de esta Sesión
-    st.markdown("---")
-    st.markdown("### 🔄 Historial de Consultas (Sesión Actual)")
+    # Verificar si hay datos de monitorización
+    if 'monitoring_data' not in st.session_state:
+        st.session_state.monitoring_data = []
     
-    if 'query_history' in st.session_state and len(st.session_state.query_history) > 0:
-        history_df = pd.DataFrame(st.session_state.query_history)
-        
-        # Calcular totales de la sesión
-        total_session_bytes = history_df['bytes_processed'].sum()
-        total_session_gb = total_session_bytes / (1024 ** 3)
-        total_session_cost = history_df['cost_usd'].sum()
-        cache_hits = history_df['cache_hit'].sum()
-        cache_rate = (cache_hits / len(history_df) * 100) if len(history_df) > 0 else 0
-        
-        # Métricas principales
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Consultas Ejecutadas", len(history_df))
-        with col2:
-            st.metric("Datos Procesados", bytes_to_readable(total_session_bytes))
-        with col3:
-            st.metric("Costo Sesión (USD)", f"${total_session_cost:.6f}")
-        with col4:
-            st.metric("Tasa Caché", f"{cache_rate:.1f}%")
-        
-        # Información sobre el Free Tier
-        st.markdown("---")
-        st.markdown("### 🎁 Información del Free Tier de BigQuery")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Info del free tier
-            FREE_TIER_GB = 1024  # 1 TB
-            percentage_used_session = (total_session_gb / FREE_TIER_GB) * 100
-            
-            st.info(f"""
-            **Free Tier de BigQuery:**
-            - **1 TB (1024 GB) gratis al mes**
-            - Se reinicia el día 1 de cada mes
-            - Las consultas en caché NO cuentan
-            
-            **En esta sesión has usado:**
-            - {total_session_gb:.4f} GB ({percentage_used_session:.2f}% del free tier)
-            - {cache_hits} de {len(history_df)} consultas fueron desde caché (gratis)
-            """)
-        
-        with col2:
-            # Gauge del free tier proyectado
-            fig_gauge = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=total_session_gb,
-                domain={'x': [0, 1], 'y': [0, 1]},
-                title={'text': f"GB Usados (Sesión)<br><sub>Free Tier: {FREE_TIER_GB} GB/mes</sub>"},
-                gauge={
-                    'axis': {'range': [None, 10]},  # Escala de 0 a 10 GB
-                    'bar': {'color': "darkblue"},
-                    'steps': [
-                        {'range': [0, 5], 'color': "lightgreen"},
-                        {'range': [5, 8], 'color': "yellow"},
-                        {'range': [8, 10], 'color': "orange"},
-                    ],
-                    'threshold': {
-                        'line': {'color': "red", 'width': 4},
-                        'thickness': 0.75,
-                        'value': 10
-                    }
-                }
-            ))
-            fig_gauge.update_layout(height=300)
-            st.plotly_chart(fig_gauge, use_container_width=True)
-        
-        # Gráfico de consumo por consulta
-        st.markdown("---")
-        st.markdown("### 📊 Análisis de Consultas")
-        
-        history_df['query_number'] = range(1, len(history_df) + 1)
-        history_df['gb_processed'] = history_df['bytes_processed'] / (1024 ** 3)
-        history_df['mb_processed'] = history_df['bytes_processed'] / (1024 ** 2)
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Gráfico de barras: consumo por consulta
-            fig_session = px.bar(
-                history_df,
-                x='query_number',
-                y='mb_processed',
-                title='Consumo por Consulta (MB)',
-                labels={'mb_processed': 'MB Procesados', 'query_number': 'Consulta #'},
-                color='cache_hit',
-                color_discrete_map={True: 'green', False: 'blue'},
-                hover_data=['bytes_readable', 'cost_usd']
-            )
-            fig_session.update_layout(showlegend=True)
-            st.plotly_chart(fig_session, use_container_width=True)
-        
-        with col2:
-            # Pie chart: caché vs no caché
-            cache_data = pd.DataFrame({
-                'tipo': ['Desde Caché (gratis)', 'Procesadas'],
-                'cantidad': [cache_hits, len(history_df) - cache_hits]
-            })
-            
-            fig_cache = px.pie(
-                cache_data,
-                values='cantidad',
-                names='tipo',
-                title='Consultas: Caché vs Procesadas',
-                color='tipo',
-                color_discrete_map={
-                    'Desde Caché (gratis)': 'green',
-                    'Procesadas': 'blue'
-                }
-            )
-            st.plotly_chart(fig_cache, use_container_width=True)
-        
-        # Top consultas más pesadas
-        st.markdown("### 🔝 Top 10 Consultas Más Pesadas")
-        
-        top_queries = history_df.nlargest(10, 'bytes_processed')
-        
-        fig_top = px.bar(
-            top_queries,
-            x='query_number',
-            y='gb_processed',
-            title='Top 10 Consultas por GB Procesados',
-            labels={'gb_processed': 'GB', 'query_number': 'Consulta #'},
-            color='gb_processed',
-            color_continuous_scale='Reds',
-            hover_data=['bytes_readable', 'cost_usd', 'cache_hit']
+    monitoring_data = st.session_state.monitoring_data
+    
+    if not monitoring_data:
+        st.info("👋 No hay consultas registradas aún. Ejecuta algunas consultas en otros tabs para ver estadísticas aquí.")
+        return
+    
+    # Métricas generales
+    st.subheader("📈 Métricas Generales de la Sesión")
+    
+    total_queries = len(monitoring_data)
+    successful_queries = sum(1 for q in monitoring_data if q['status'] == 'Success')
+    failed_queries = sum(1 for q in monitoring_data if q['status'] == 'Error')
+    total_duration = sum(q['duration'] for q in monitoring_data)
+    total_gb = sum(q['gb_used'] for q in monitoring_data)
+    avg_duration = total_duration / total_queries if total_queries > 0 else 0
+    
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        st.metric("Total Consultas", f"{total_queries}")
+    
+    with col2:
+        st.metric("Exitosas", f"{successful_queries}", delta=f"{(successful_queries/total_queries*100):.1f}%" if total_queries > 0 else "0%")
+    
+    with col3:
+        st.metric("Con Errores", f"{failed_queries}", delta=f"{(failed_queries/total_queries*100):.1f}%" if total_queries > 0 else "0%", delta_color="inverse")
+    
+    with col4:
+        st.metric("Tiempo Total", f"{total_duration:.2f}s")
+    
+    with col5:
+        st.metric("GB Procesados", f"{total_gb:.3f}")
+    
+    st.divider()
+    
+    # Duración de consultas
+    st.subheader("⏱️ Duración de Consultas")
+    
+    # Crear DataFrame para análisis
+    df_monitoring = pd.DataFrame(monitoring_data)
+    
+    if not df_monitoring.empty:
+        # Gráfico de duración por consulta
+        fig_duration = px.bar(
+            df_monitoring,
+            x=df_monitoring.index,
+            y='duration',
+            color='status',
+            title='Duración de Cada Consulta',
+            labels={'index': 'Número de Consulta', 'duration': 'Duración (segundos)', 'status': 'Estado'},
+            color_discrete_map={'Success': '#4CAF50', 'Error': '#F44336'},
+            hover_data=['query_name']
         )
-        st.plotly_chart(fig_top, use_container_width=True)
+        fig_duration.update_layout(showlegend=True, height=400)
+        st.plotly_chart(fig_duration, use_container_width=True)
         
-        # Estadísticas detalladas
-        st.markdown("### 📋 Estadísticas Detalladas")
+        # Estadísticas de duración
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Duración Promedio", f"{avg_duration:.2f}s")
+        
+        with col2:
+            max_duration = df_monitoring['duration'].max()
+            st.metric("Más Lenta", f"{max_duration:.2f}s")
+        
+        with col3:
+            min_duration = df_monitoring['duration'].min()
+            st.metric("Más Rápida", f"{min_duration:.2f}s")
+        
+        with col4:
+            median_duration = df_monitoring['duration'].median()
+            st.metric("Duración Mediana", f"{median_duration:.2f}s")
+    
+    st.divider()
+    
+    # GB usados por query
+    st.subheader("📊 GB Usados por Consulta")
+    
+    if monitoring_data:
+        # Ordenar por GB usados descendente
+        sorted_by_gb = sorted(monitoring_data, key=lambda x: x['gb_used'], reverse=True)
+        
+        # Mostrar top 10 consultas con más GB
+        st.write("**Top 10 Consultas por Consumo de GB:**")
+        
+        for i, query in enumerate(sorted_by_gb[:10], 1):
+            col1, col2, col3 = st.columns([3, 1, 1])
+            
+            with col1:
+                # Nombre de la consulta (truncado si es muy largo)
+                query_name = query['query_name'][:60] + '...' if len(query['query_name']) > 60 else query['query_name']
+                st.write(f"**{i}.** {query_name}")
+            
+            with col2:
+                st.metric("GB Usados", f"{query['gb_used']:.3f}")
+            
+            with col3:
+                st.metric("Duración", f"{query['duration']:.2f}s")
+        
+        # Resumen estadístico
+        st.divider()
+        
+        total_gb = sum(q['gb_used'] for q in monitoring_data)
+        avg_gb = total_gb / len(monitoring_data) if monitoring_data else 0
+        max_gb_query = max(monitoring_data, key=lambda x: x['gb_used'])
         
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            avg_bytes = history_df['bytes_processed'].mean()
-            st.metric("Promedio por Consulta", bytes_to_readable(avg_bytes))
+            st.metric("Total GB (Sesión)", f"{total_gb:.3f} GB")
         
         with col2:
-            max_bytes = history_df['bytes_processed'].max()
-            st.metric("Consulta Más Grande", bytes_to_readable(max_bytes))
+            st.metric("Promedio por Query", f"{avg_gb:.3f} GB")
         
         with col3:
-            min_bytes = history_df[history_df['bytes_processed'] > 0]['bytes_processed'].min() if len(history_df[history_df['bytes_processed'] > 0]) > 0 else 0
-            st.metric("Consulta Más Pequeña", bytes_to_readable(min_bytes))
+            st.metric("Consulta Más Pesada", f"{max_gb_query['gb_used']:.3f} GB")
         
-        # Tabla completa
-        st.markdown("---")
-        st.markdown("### 📄 Tabla Completa de Consultas")
-        
-        # Preparar DataFrame para mostrar
-        display_df = history_df[['query_number', 'timestamp', 'bytes_readable', 'cache_hit', 'cost_usd']].copy()
-        display_df['cache_hit'] = display_df['cache_hit'].map({True: '✅ Caché', False: '🔄 Procesada'})
-        
-        st.dataframe(
-            display_df.style.format({
-                'cost_usd': '${:.6f}',
-                'timestamp': lambda x: x.strftime('%H:%M:%S') if hasattr(x, 'strftime') else str(x)
-            }),
-            use_container_width=True,
-            height=400
-        )
-        
-        # Botones de acción
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Descargar historial
-            csv = display_df.to_csv(index=False)
-            st.download_button(
-                label="📥 Descargar Historial CSV",
-                data=csv,
-                file_name="bq_query_history.csv",
-                mime="text/csv"
-            )
-        
-        with col2:
-            # Limpiar historial
-            if st.button("🗑️ Limpiar Historial", type="secondary"):
-                st.session_state.query_history = []
-                st.rerun()
-    
+        st.caption(f"Consulta más pesada: {max_gb_query['query_name'][:50]}...")
     else:
-        st.info("ℹ️ No hay consultas en esta sesión todavía. Ejecuta algunas consultas para ver el historial.")
-        
-        # Mostrar ejemplo de cómo se verá
-        st.markdown("### 📊 Vista Previa")
-        st.markdown("""
-        Cuando ejecutes consultas en las otras tabs, aquí verás:
-        - 📊 Cuántos GB procesa cada consulta
-        - 💰 Costo estimado de cada consulta
-        - ✅ Qué consultas se sirvieron desde caché (gratis)
-        - 📈 Gráficos de evolución de consumo
-        - 🏆 Top consultas más pesadas
-        """)
+        st.info("No hay datos de consumo GB en esta sesión")
     
-    # Información adicional
-    st.markdown("---")
-    st.markdown("### ℹ️ Información sobre Costos y Optimización")
+    st.divider()
+    
+    # Distribución de estados
+    st.subheader("✅ Estado de las Consultas")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        with st.expander("💰 Precios de BigQuery", expanded=False):
-            st.markdown("""
-            **Modelo On-Demand (Pago por Uso):**
-            - **$5 por TB** procesado ($0.005 por GB)
-            - **1 TB gratis** al mes (1024 GB)
-            - El almacenamiento es gratuito hasta 10 GB
-            - Las consultas en caché son **completamente gratis**
-            
-            **Cómo se calcula el costo:**
-            ```
-            Costo = (GB procesados) × $0.005
-            ```
-            
-            **Ejemplo:**
-            - Consulta de 10 GB = $0.05
-            - Consulta de 100 GB = $0.50
-            - Consulta de 1 TB = $5.00
-            
-            **Free Tier:**
-            - Primeros 1024 GB al mes: **$0**
-            - GB adicionales: $0.005 por GB
-            - Se reinicia el 1 de cada mes
-            
-            **Más información:**
-            - [Precios de BigQuery](https://cloud.google.com/bigquery/pricing)
-            """)
+        # Pie chart de estados
+        status_counts = df_monitoring['status'].value_counts()
+        fig_status = px.pie(
+            values=status_counts.values,
+            names=status_counts.index,
+            title='Distribución de Estados',
+            color=status_counts.index,
+            color_discrete_map={'Success': '#4CAF50', 'Error': '#F44336'}
+        )
+        st.plotly_chart(fig_status, use_container_width=True)
     
     with col2:
-        with st.expander("🎯 Consejos para Optimizar", expanded=False):
-            st.markdown("""
-            **Para esta herramienta BigQuery Shield:**
-            
-            1. **Reduce el rango de fechas**: 
-               - Menos días = menos datos procesados
-               - 7 días suele ser suficiente para análisis
-            
-            2. **Usa filtros específicos**: 
-               - Filtra por canales, dispositivos, etc.
-               - Usa los sliders y selectores de cada tab
-            
-            3. **Ejecuta consultas por partes**: 
-               - No ejecutes todas las tabs a la vez
-               - Analiza primero las más importantes
-            
-            4. **Revisa el historial**: 
-               - Ve qué consultas consumen más
-               - Identifica patrones de uso
-            
-            5. **Aprovecha el caché**: 
-               - Ejecutar la misma consulta dos veces usa caché
-               - El caché dura 24 horas
-               - Las consultas en caché son **gratis** ✅
-            
-            **Consultas más pesadas en esta app:**
-            - 🔴 **Eventos Flatten**: Puede procesar varios GB
-            - 🟡 **Atribución Completa (7 modelos)**: Procesa bastantes datos
-            - 🟡 **Session Path Analysis**: Depende del volumen
-            - 🟢 **Cookies y Ecommerce**: Generalmente ligeras
-            
-            **Tip Pro:**
-            Si una consulta procesa muchos GB, reduce el rango de fechas
-            y vuelve a ejecutar. Verás una reducción proporcional en el consumo.
-            """)
+        # Métricas de rendimiento
+        st.write("**📊 Indicadores de Rendimiento:**")
+        
+        success_rate = (successful_queries / total_queries * 100) if total_queries > 0 else 0
+        
+        if success_rate >= 95:
+            st.success(f"✅ Tasa de éxito: {success_rate:.1f}% - Excelente")
+        elif success_rate >= 80:
+            st.info(f"ℹ️ Tasa de éxito: {success_rate:.1f}% - Bueno")
+        else:
+            st.warning(f"⚠️ Tasa de éxito: {success_rate:.1f}% - Necesita atención")
+        
+        # Promedio de GB por consulta
+        avg_gb_per_query = total_gb / total_queries if total_queries > 0 else 0
+        
+        if avg_gb_per_query < 0.5:
+            st.success(f"✅ Consumo promedio: {avg_gb_per_query:.3f} GB - Eficiente")
+        elif avg_gb_per_query < 2.0:
+            st.info(f"ℹ️ Consumo promedio: {avg_gb_per_query:.3f} GB - Moderado")
+        else:
+            st.warning(f"⚠️ Consumo promedio: {avg_gb_per_query:.3f} GB - Alto consumo")
+        
+        # Tiempo promedio
+        if avg_duration < 5:
+            st.success(f"✅ Tiempo promedio: {avg_duration:.2f}s - Rápido")
+        elif avg_duration < 15:
+            st.info(f"ℹ️ Tiempo promedio: {avg_duration:.2f}s - Normal")
+        else:
+            st.warning(f"⚠️ Tiempo promedio: {avg_duration:.2f}s - Lento")
     
-    # Calculadora de costes
-    st.markdown("---")
-    st.markdown("### 🧮 Calculadora de Costes")
+    st.divider()
     
-    col1, col2, col3 = st.columns(3)
+    # Tabla completa de consultas
+    st.subheader("📋 Tabla Completa de Consultas")
+    
+    if monitoring_data:
+        # Preparar datos para la tabla
+        table_data = []
+        for query in monitoring_data:
+            table_data.append({
+                'Nombre de Consulta': query['query_name'],
+                'Fecha y Hora': query['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
+                'Duración (s)': round(query['duration'], 2),
+                'GB Usados': round(query['gb_used'], 3),
+                'Estado': query['status']
+            })
+        
+        # Crear DataFrame
+        df_queries = pd.DataFrame(table_data)
+        
+        # Ordenar por fecha descendente (más reciente primero)
+        df_queries = df_queries.sort_values('Fecha y Hora', ascending=False)
+        
+        # Aplicar estilo condicional
+        def highlight_status(row):
+            if row['Estado'] == 'Success':
+                return ['background-color: #d4edda'] * len(row)
+            elif row['Estado'] == 'Error':
+                return ['background-color: #f8d7da'] * len(row)
+            else:
+                return [''] * len(row)
+        
+        # Mostrar tabla con formato
+        st.dataframe(
+            df_queries.style.apply(highlight_status, axis=1).format({
+                'Duración (s)': '{:.2f}',
+                'GB Usados': '{:.3f}'
+            }),
+            height=600,
+            use_container_width=True
+        )
+        
+        # Información adicional
+        st.caption(f"""
+        📊 **Total de consultas en sesión:** {len(monitoring_data)} | 
+        ✅ **Exitosas:** {sum(1 for q in monitoring_data if q['status'] == 'Success')} | 
+        ❌ **Con errores:** {sum(1 for q in monitoring_data if q['status'] == 'Error')}
+        """)
+        
+        # Botón para exportar
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            csv_queries = df_queries.to_csv(index=False)
+            st.download_button(
+                label="📥 Descargar CSV",
+                data=csv_queries,
+                file_name=f"consultas_bigquery_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv"
+            )
+    else:
+        st.info("No hay consultas registradas en esta sesión")
+    
+    st.divider()
+    
+    # Timeline de consultas
+    st.subheader("📅 Timeline de Consultas")
+    
+    if not df_monitoring.empty and 'timestamp' in df_monitoring.columns:
+        # Convertir timestamp a formato legible
+        df_monitoring['time_str'] = df_monitoring['timestamp'].dt.strftime('%H:%M:%S')
+        
+        fig_timeline = px.scatter(
+            df_monitoring,
+            x='timestamp',
+            y='duration',
+            color='status',
+            size='gb_used',
+            title='Timeline de Ejecución de Consultas',
+            labels={
+                'timestamp': 'Hora de Ejecución',
+                'duration': 'Duración (segundos)',
+                'status': 'Estado',
+                'gb_used': 'GB Usados'
+            },
+            color_discrete_map={'Success': '#4CAF50', 'Error': '#F44336'},
+            hover_data=['query_name', 'gb_used']
+        )
+        fig_timeline.update_layout(height=400)
+        st.plotly_chart(fig_timeline, use_container_width=True)
+    
+    st.divider()
+    
+    # Recomendaciones
+    st.subheader("💡 Recomendaciones")
+    
+    recommendations = []
+    
+    # Análisis de errores
+    if failed_queries > 0:
+        error_rate = (failed_queries / total_queries * 100)
+        recommendations.append(f"⚠️ Tienes {failed_queries} consultas con errores ({error_rate:.1f}%). Revisa los logs para identificar problemas.")
+    
+    # Análisis de duración
+    if avg_duration > 20:
+        recommendations.append(f"🐌 El tiempo promedio de consulta es {avg_duration:.2f}s. Considera optimizar las consultas más lentas o reducir el rango de fechas.")
+    
+    # Análisis de GB
+    if avg_gb > 1.0:
+        recommendations.append(f"💾 El consumo promedio por consulta es {avg_gb:.3f} GB. Intenta filtrar más datos o usar particiones.")
+    
+    # Consultas específicas lentas
+    slow_queries = [q for q in monitoring_data if q['duration'] > 30]
+    if slow_queries:
+        recommendations.append(f"⏱️ Tienes {len(slow_queries)} consultas que tardaron más de 30 segundos. Considera optimizarlas.")
+    
+    # Consultas pesadas en GB
+    heavy_queries = [q for q in monitoring_data if q['gb_used'] > 2.0]
+    if heavy_queries:
+        recommendations.append(f"📊 Tienes {len(heavy_queries)} consultas que procesaron más de 2 GB. Revisa si puedes reducir el volumen de datos.")
+    
+    if recommendations:
+        for rec in recommendations:
+            st.warning(rec)
+    else:
+        st.success("✅ ¡Excelente! Todas las métricas están en rangos óptimos.")
+    
+    st.divider()
+    
+    # Botón para limpiar monitorización
+    st.subheader("🗑️ Gestión de Datos")
+    
+    col1, col2 = st.columns([1, 4])
     
     with col1:
-        calc_gb = st.number_input(
-            "GB a procesar:",
-            min_value=0.0,
-            max_value=10000.0,
-            value=10.0,
-            step=0.1,
-            key="calc_gb"
-        )
+        if st.button("🗑️ Limpiar Historial", type="secondary"):
+            st.session_state.monitoring_data = []
+            st.success("✅ Historial de consultas limpiado")
+            st.rerun()
     
     with col2:
-        calc_cost_usd = calc_gb * 0.005
-        st.metric("Costo (USD)", f"${calc_cost_usd:.4f}")
-    
-    with col3:
-        calc_cost_eur = calc_cost_usd * 0.92
-        st.metric("Costo (EUR)", f"€{calc_cost_eur:.4f}")
-    
-    # Comparación de escenarios
-    if calc_gb > 0:
-        st.info(f"""
-        **Comparación de escenarios:**
-        - **1 mes** con {calc_gb} GB/día = **{calc_gb * 30:.2f} GB** = **${calc_gb * 30 * 0.005:.2f}** USD
-        - **1 año** con {calc_gb} GB/día = **{calc_gb * 365:.2f} GB** = **${calc_gb * 365 * 0.005:.2f}** USD
-        
-        💡 **Tip**: Los primeros 1024 GB al mes son gratis. Si tu uso diario es {calc_gb} GB:
-        - Días gratis: **{1024 / calc_gb:.0f} días** (aprox {1024 / calc_gb / 30:.1f} meses)
-        """)
+        st.caption("Limpia el historial de consultas de la sesión actual. Esto no afecta a los datos en BigQuery.")
