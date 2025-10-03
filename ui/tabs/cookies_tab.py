@@ -162,3 +162,77 @@ def show_cookies_tab(client, project, dataset, start_date, end_date):
                 query = generar_query_consentimiento_por_fuente_trafico(project, dataset, start_date, end_date)
                 df = run_query(client, query)
                 st
+                st.session_state.cookies_trafico_data = df
+                st.session_state.cookies_trafico_show = True
+        
+        # Mostrar resultados si existen
+        if st.session_state.cookies_trafico_show and st.session_state.cookies_trafico_data is not None:
+            mostrar_consentimiento_por_fuente_trafico(st.session_state.cookies_trafico_data)
+    
+    # ==========================================
+    # SECCIÓN 6: Porcentaje Real de Consentimiento (ORIGINAL)
+    # ==========================================
+    with st.expander("🔍 Porcentaje Real de Consentimiento", expanded=st.session_state.cookies_real_show):
+        st.info("""
+        **Análisis preciso del consentimiento:**
+        - Tasa real de eventos con consentimiento
+        - Clasificación: Aceptado, Denegado, No Definido
+        - Porcentaje de eventos sin consentimiento explícito
+        - Vista global sobre todos los eventos del período
+        """)
+        
+        if st.button("Calcular Consentimiento Real", key="btn_consent_real"):
+            with st.spinner("Analizando todos los eventos..."):
+                query = generar_query_consentimiento_real(project, dataset, start_date, end_date)
+                df = run_query(client, query)
+                st.session_state.cookies_real_data = df
+                st.session_state.cookies_real_show = True
+        
+        # Mostrar resultados si existen
+        if st.session_state.cookies_real_show and st.session_state.cookies_real_data is not None:
+            mostrar_consentimiento_real(st.session_state.cookies_real_data)
+    
+    # Mensaje de completado
+    st.success("✅ **Todas las consultas de Cookies y Privacidad están disponibles!**")
+    
+    # Información adicional sobre GDPR y privacidad
+    with st.expander("ℹ️ Información sobre GDPR y Compliance", expanded=False):
+        st.markdown("""
+        ### 📚 Guía de Cumplimiento GDPR
+        
+        **Requisitos básicos del GDPR para cookies:**
+        
+        1. **Consentimiento explícito**: Los usuarios deben dar consentimiento activo (no pre-marcado)
+        2. **Granularidad**: Permitir aceptar/rechazar cookies por categorías
+        3. **Fácil revocación**: Debe ser tan fácil retirar el consentimiento como darlo
+        4. **Información clara**: Explicar qué cookies se usan y para qué
+        5. **Sin penalización**: No penalizar a usuarios que rechazan cookies no esenciales
+        
+        **Mejores prácticas:**
+        
+        - ✅ Banner con opciones claras de "Aceptar" y "Rechazar"
+        - ✅ Opción de "Configurar" para consentimiento granular
+        - ✅ Link visible a política de privacidad
+        - ✅ Gestión de consentimiento accesible desde cualquier página
+        - ✅ Registrar el consentimiento con timestamp
+        
+        **Tasas de consentimiento típicas:**
+        
+        - 🇪🇺 **Europa (GDPR)**: 40-60% aceptación
+        - 🇺🇸 **Norteamérica**: 60-80% aceptación (menos regulación)
+        - 🌎 **LATAM**: 70-85% aceptación (regulación emergente)
+        - 🌏 **Asia**: 50-70% aceptación (muy variable por país)
+        
+        **Señales de alerta:**
+        
+        - 🚨 Tasa de consentimiento < 30% → Revisar UX del banner
+        - 🚨 Tasa de bounce > 70% tras banner → Banner demasiado intrusivo
+        - 🚨 Diferencia Analytics vs Ads > 30% → Revisar configuración
+        - 🚨 Caída brusca en consentimiento → Investigar causa inmediatamente
+        
+        **Recursos útiles:**
+        
+        - [GDPR Official Text](https://gdpr-info.eu/)
+        - [Google Consent Mode](https://support.google.com/analytics/answer/9976101)
+        - [IAB Transparency Framework](https://iabeurope.eu/transparency-consent-framework/)
+        """)
