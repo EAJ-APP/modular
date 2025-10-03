@@ -836,3 +836,145 @@ def mostrar_combos_cross_selling(df):
     - **€{potential_revenue * 12:,.0f}/año** en revenue incremental
     
     *Asumiendo un aumento de 15 puntos porcentuales en confidence mediante
+    recomendaciones y bundles*
+    """)
+    
+    # Análisis de estacionalidad/tendencias (si hay suficientes datos)
+    st.subheader("📊 Insights Adicionales")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("**🔥 Combos de Alto Impacto:**")
+        high_impact = df_filtered[
+            df_filtered['combined_revenue'] > df_filtered['combined_revenue'].quantile(0.75)
+        ].head(5)
+        
+        if not high_impact.empty:
+            for _, row in high_impact.iterrows():
+                st.write(f"- **{row['product_a'][:30]}** + **{row['product_b'][:30]}**")
+                st.write(f"  Revenue combinado: €{row['combined_revenue']:,.0f}")
+        else:
+            st.write("No hay datos suficientes")
+    
+    with col2:
+        st.write("**⚠️ Oportunidades Perdidas:**")
+        st.markdown("""
+        Productos con alto volumen individual pero **sin** combos fuertes:
+        """)
+        
+        # Identificar productos solitarios (aparecen poco en combos)
+        all_products_in_combos = set(df_filtered['product_a'].unique()) | set(df_filtered['product_b'].unique())
+        
+        st.info(f"""
+        De {len(all_products_in_combos)} productos en combos:
+        - {len(df_filtered[df_filtered['lift'] >= 2])} tienen sinergia fuerte (Lift ≥ 2)
+        - {len(df_filtered[(df_filtered['lift'] >= 1) & (df_filtered['lift'] < 2)])} tienen sinergia moderada
+        
+        💡 **Acción**: Identifica productos con alto volumen pero sin combos fuertes
+        y crea bundles estratégicos manualmente
+        """)
+    
+    # Comparativa: Bidireccionalidad
+    st.subheader("🔄 Análisis de Bidireccionalidad")
+    
+    st.info("""
+    **¿La relación A→B es simétrica?**
+    
+    Algunos combos son bidireccionales (A lleva a B, B lleva a A), otros no.
+    """)
+    
+    # Calcular diferencia entre confidence A→B y B→A
+    df_filtered['confidence_diff'] = abs(df_filtered['confidence_a_to_b'] - df_filtered['confidence_b_to_a'])
+    df_filtered['bidirectional'] = df_filtered['confidence_diff'] < 10  # Diferencia < 10% = bidireccional
+    
+    bidirectional_count = df_filtered['bidirectional'].sum()
+    unidirectional_count = len(df_filtered) - bidirectional_count
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.metric("Combos Bidireccionales", f"{bidirectional_count} ({bidirectional_count/len(df_filtered)*100:.1f}%)")
+        st.caption("A→B y B→A tienen confidence similar")
+    
+    with col2:
+        st.metric("Combos Unidireccionales", f"{unidirectional_count} ({unidirectional_count/len(df_filtered)*100:.1f}%)")
+        st.caption("Relación asimétrica (A→B ≠ B→A)")
+    
+    # Ejemplo de combos unidireccionales
+    unidirectional_combos = df_filtered[df_filtered['confidence_diff'] > 20].head(5)
+    
+    if not unidirectional_combos.empty:
+        st.write("**Ejemplos de Relaciones Asimétricas:**")
+        for _, row in unidirectional_combos.iterrows():
+            if row['confidence_a_to_b'] > row['confidence_b_to_a']:
+                st.write(f"- **{row['product_a']}** → **{row['product_b']}**: {row['confidence_a_to_b']:.1f}%")
+                st.write(f"  (Pero **{row['product_b']}** → **{row['product_a']}**: solo {row['confidence_b_to_a']:.1f}%)")
+            else:
+                st.write(f"- **{row['product_b']}** → **{row['product_a']}**: {row['confidence_b_to_a']:.1f}%")
+                st.write(f"  (Pero **{row['product_a']}** → **{row['product_b']}**: solo {row['confidence_a_to_b']:.1f}%)")
+        
+        st.info("💡 **Estrategia**: En relaciones asimétricas, enfoca el cross-sell en la dirección más fuerte")
+    
+    # Exportar datos
+    st.subheader("📥 Exportar Datos")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # CSV completo
+        csv_full = df_filtered.to_csv(index=False)
+        st.download_button(
+            label="📥 Descargar Todos los Combos (CSV)",
+            data=csv_full,
+            file_name="combos_cross_selling_completo.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    
+    with col2:
+        # CSV solo top combos para implementar
+        top_for_implementation = df_filtered[
+            (df_filtered['lift'] >= 1.5) &
+            (df_filtered['confidence_a_to_b'] >= 25)
+        ].head(20)
+        
+        csv_top = top_for_implementation[['product_a', 'product_b', 'lift', 'confidence_a_to_b', 'times_bought_together']].to_csv(index=False)
+        st.download_button(
+            label="⭐ Descargar Top Combos para Implementar (CSV)",
+            data=csv_top,
+            file_name="combos_top_para_implementar.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    
+    # Guía de implementación técnica
+    with st.expander("🛠️ Guía Técnica de Implementación", expanded=False):
+        st.markdown("""
+        ### Implementación en tu Ecommerce
+        
+        #### **1. En Página de Producto (Product Detail Page)**
+```python
+        # Pseudocódigo
+        def get_cross_sell_recommendations(product_id):
+            # Consultar combos donde product_id aparece como product_a
+            combos = query_database(f"
+                SELECT product_b, lift, confidence_a_to_b
+                FROM combos
+                WHERE product_a = '{product_id}'
+                AND lift >= 1.5
+                ORDER BY combo_strength_score DESC
+                LIMIT 4
+            ")
+            return combos
+        
+        # En tu template HTML
+        <div class="cross-sell-section">
+            <h3>Los clientes que compraron esto también compraron:</h3>
+            {% for product in cross_sell_products %}
+                <div class="product-card">
+                    {{ product.name }}
+                    <span class="badge">{{ product.confidence }}% de clientes</span>
+                </div>
+            {% endfor %}
+        </div>
