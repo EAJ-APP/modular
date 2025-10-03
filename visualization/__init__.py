@@ -57,6 +57,9 @@ __all__ = [
     'mostrar_consentimiento_basico',
     'mostrar_consentimiento_por_dispositivo', 
     'mostrar_consentimiento_real',
+    'mostrar_evolucion_temporal_consentimiento',     
+    'mostrar_consentimiento_por_geografia',           
+    'mostrar_consentimiento_por_fuente_trafico',      
     # Ecommerce
     'mostrar_comparativa_eventos',
     'mostrar_ingresos_transacciones',
