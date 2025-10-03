@@ -12,7 +12,8 @@ from .ecommerce_queries import (
     generar_query_ingresos_transacciones,
     generar_query_productos_mas_vendidos,
     generar_query_relacion_productos,
-    generar_query_funnel_por_producto
+    generar_query_funnel_por_producto,
+    generar_query_combos_cross_selling
 )
 
 from .acquisition_queries import (
@@ -59,6 +60,7 @@ __all__ = [
     'generar_query_productos_mas_vendidos',
     'generar_query_relacion_productos',
     'generar_query_funnel_por_producto',
+    'generar_query_combos_cross_selling',
     # Acquisition
     'generar_query_canales_trafico',
     'generar_query_atribucion_marketing',
