@@ -124,6 +124,29 @@ def show_ecommerce_tab(client, project, dataset, start_date, end_date):
         # Mostrar resultados si existen
         if st.session_state.ecommerce_relacion_show and st.session_state.ecommerce_relacion_data is not None:
             mostrar_relacion_productos(st.session_state.ecommerce_relacion_data)
-    
+
+    # ==========================================
+    # SECCIÓN 5: Análisis de Combos y Cross-Selling (NUEVO)
+    # ==========================================
+    with st.expander("🔄 Análisis de Combos y Cross-Selling", 
+                     expanded=st.session_state.ecommerce_combos_show):
+        st.info("""
+        **Market Basket Analysis:**
+        - Identificar productos que se compran juntos frecuentemente
+        - Calcular Lift, Confidence y Support de cada combo
+        - Optimizar estrategia de cross-selling y bundles
+        - Aumentar AOV (Average Order Value) mediante recomendaciones
+        """)
+        
+        if st.button("Analizar Combos y Cross-Selling", key="btn_combos"):
+            with st.spinner("Analizando combos de productos (esto puede tardar)..."):
+                query = generar_query_combos_cross_selling(project, dataset, start_date, end_date)
+                df = run_query(client, query)
+                st.session_state.ecommerce_combos_data = df
+                st.session_state.ecommerce_combos_show = True
+        
+        # Mostrar resultados si existen
+        if st.session_state.ecommerce_combos_show and st.session_state.ecommerce_combos_data is not None:
+            mostrar_combos_cross_selling(st.session_state.ecommerce_combos_data)
     # Mensaje de completado
     st.success("✅ **Todas las consultas de Ecommerce están disponibles!**")
