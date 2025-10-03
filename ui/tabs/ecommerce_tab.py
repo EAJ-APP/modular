@@ -36,6 +36,11 @@ def show_ecommerce_tab(client, project, dataset, start_date, end_date):
         st.session_state.ecommerce_relacion_data = None
     if 'ecommerce_relacion_show' not in st.session_state:
         st.session_state.ecommerce_relacion_show = False
+
+    if 'ecommerce_combos_data' not in st.session_state:
+        st.session_state.ecommerce_combos_data = None
+    if 'ecommerce_combos_show' not in st.session_state:
+        st.session_state.ecommerce_combos_show = False
     
     # Sección 1: Funnel de Conversión
     with st.expander("📊 Funnel de Conversión", expanded=st.session_state.ecommerce_funnel_show):
