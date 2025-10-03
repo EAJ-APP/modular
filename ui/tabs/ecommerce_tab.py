@@ -3,13 +3,15 @@ from database.queries import (
     generar_query_comparativa_eventos,
     generar_query_ingresos_transacciones,
     generar_query_productos_mas_vendidos,
-    generar_query_relacion_productos
+    generar_query_relacion_productos,
+    generar_query_combos_cross_selling
 )
 from visualization.ecommerce_visualizations import (
     mostrar_comparativa_eventos,
     mostrar_ingresos_transacciones,
     mostrar_productos_mas_vendidos,
-    mostrar_relacion_productos
+    mostrar_relacion_productos,
+    mostrar_combos_cross_selling
 )
 from database.connection import run_query
 
