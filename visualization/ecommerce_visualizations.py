@@ -835,8 +835,7 @@ def mostrar_combos_cross_selling(df):
     - **€{potential_revenue:,.0f}/mes** en ventas adicionales
     - **€{potential_revenue * 12:,.0f}/año** en revenue incremental
     
-    *Asumiendo un aumento de 15 puntos porcentuales en confidence mediante
-    recomendaciones y bundles*
+    *Asumiendo un aumento de 15 puntos porcentuales en confidence mediante recomendaciones y bundles*
     """)
     
     # Análisis de estacionalidad/tendencias (si hay suficientes datos)
@@ -947,34 +946,3 @@ def mostrar_combos_cross_selling(df):
             mime="text/csv",
             use_container_width=True
         )
-    
-    # Guía de implementación técnica
-    with st.expander("🛠️ Guía Técnica de Implementación", expanded=False):
-        st.markdown("""
-        ### Implementación en tu Ecommerce
-        
-        #### **1. En Página de Producto (Product Detail Page)**
-```python
-        # Pseudocódigo
-        def get_cross_sell_recommendations(product_id):
-            # Consultar combos donde product_id aparece como product_a
-            combos = query_database(f"
-                SELECT product_b, lift, confidence_a_to_b
-                FROM combos
-                WHERE product_a = '{product_id}'
-                AND lift >= 1.5
-                ORDER BY combo_strength_score DESC
-                LIMIT 4
-            ")
-            return combos
-        
-        # En tu template HTML
-        <div class="cross-sell-section">
-            <h3>Los clientes que compraron esto también compraron:</h3>
-            {% for product in cross_sell_products %}
-                <div class="product-card">
-                    {{ product.name }}
-                    <span class="badge">{{ product.confidence }}% de clientes</span>
-                </div>
-            {% endfor %}
-        </div>
