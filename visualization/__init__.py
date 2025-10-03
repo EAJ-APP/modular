@@ -1,7 +1,10 @@
 from .cookies_visualizations import (
     mostrar_consentimiento_basico,
     mostrar_consentimiento_por_dispositivo,
-    mostrar_consentimiento_real
+    mostrar_consentimiento_real,
+    mostrar_evolucion_temporal_consentimiento,       
+    mostrar_consentimiento_por_geografia,             
+    mostrar_consentimiento_por_fuente_trafico         
 )
 
 from .ecommerce_visualizations import (
