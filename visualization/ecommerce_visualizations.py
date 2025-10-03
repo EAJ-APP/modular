@@ -361,6 +361,12 @@ def mostrar_combos_cross_selling(df):
         st.warning("No hay datos de combos para el rango seleccionado")
         return
     
+    # CREAR combo_label al inicio
+    df['combo_label'] = df['product_a'] + ' + ' + df['product_b']
+    df['combo_label_short'] = df['combo_label'].apply(
+        lambda x: x[:60] + '...' if len(x) > 60 else x
+    )
+    
     # Información educativa sobre Market Basket Analysis
     with st.expander("📚 ¿Qué es Market Basket Analysis?", expanded=False):
         st.markdown("""
@@ -416,7 +422,7 @@ def mostrar_combos_cross_selling(df):
             "Lift mínimo:",
             min_value=1.0,
             max_value=float(df['lift'].max()) if len(df) > 0 else 5.0,
-            value=1.5,
+            value=1.0,
             step=0.1,
             key="combo_min_lift",
             help="Lift > 1 significa sinergia positiva"
@@ -427,7 +433,7 @@ def mostrar_combos_cross_selling(df):
             "Confidence mínima (%):",
             min_value=0.0,
             max_value=100.0,
-            value=20.0,
+            value=0.0,
             step=5.0,
             key="combo_min_confidence",
             help="% de compradores de A que también compraron B"
@@ -436,9 +442,9 @@ def mostrar_combos_cross_selling(df):
     with col3:
         min_frequency = st.slider(
             "Compras juntas mínimas:",
-            min_value=3,
+            min_value=1,
             max_value=int(df['times_bought_together'].max()) if len(df) > 0 else 50,
-            value=5,
+            value=3,
             key="combo_min_frequency",
             help="Número mínimo de co-ocurrencias"
         )
@@ -460,12 +466,6 @@ def mostrar_combos_cross_selling(df):
     st.subheader("🏆 Top 20 Combos Más Fuertes")
     
     top_combos = df_filtered.head(20).copy()
-    top_combos['combo_label'] = top_combos['product_a'] + ' + ' + top_combos['product_b']
-    
-    # Acortar etiquetas para mejor visualización
-    top_combos['combo_label_short'] = top_combos['combo_label'].apply(
-        lambda x: x[:60] + '...' if len(x) > 60 else x
-    )
     
     fig_top_combos = px.bar(
         top_combos,
@@ -493,57 +493,45 @@ def mostrar_combos_cross_selling(df):
     st.plotly_chart(fig_top_combos, use_container_width=True)
     
     # Scatter Plot: Lift vs Confidence
-    st.subheader("💎 Matriz: Lift vs Confidence")
+    st.subheader("💎 Matriz: Frecuencia vs Valor del Carrito")
     
     fig_scatter = px.scatter(
         df_filtered.head(100),
-        x='confidence_a_to_b',
-        y='lift',
-        size='times_bought_together',
-        color='combo_strength_score',
-        hover_name='combo_label',
-        title='Relación entre Lift y Confidence (Top 100 combos)',
+        x='times_bought_together',
+        y='avg_basket_value',
+        size='combo_strength_score',
+        color='lift',
+        hover_data={
+            'product_a': True,
+            'product_b': True,
+            'confidence_a_to_b': ':.1f'
+        },
+        title='Relación entre Frecuencia y Valor del Carrito (Top 100 combos)',
         labels={
-            'confidence_a_to_b': 'Confidence A→B (%)',
+            'times_bought_together': 'Veces Comprados Juntos',
+            'avg_basket_value': 'Valor Promedio Carrito (€)',
             'lift': 'Lift',
-            'times_bought_together': 'Compras Juntas',
             'combo_strength_score': 'Strength Score'
         },
         color_continuous_scale='RdYlGn',
         size_max=60
     )
     
-    # Añadir líneas de referencia
-    fig_scatter.add_hline(
-        y=1,
-        line_dash="dash",
-        line_color="gray",
-        annotation_text="Lift = 1 (Sin relación)"
-    )
-    fig_scatter.add_vline(
-        x=50,
-        line_dash="dash",
-        line_color="gray",
-        annotation_text="Confidence = 50%"
-    )
-    
     # Añadir cuadrantes
-    fig_scatter.add_annotation(
-        x=75, y=df_filtered['lift'].max() * 0.9,
-        text="🌟 ESTRELLA<br>(Alto lift + Alta confidence)",
-        showarrow=False,
-        font=dict(size=10, color="green"),
-        bgcolor="rgba(144, 238, 144, 0.3)",
-        bordercolor="green"
-    )
+    median_freq = df_filtered['times_bought_together'].median()
+    median_value = df_filtered['avg_basket_value'].median()
     
-    fig_scatter.add_annotation(
-        x=25, y=df_filtered['lift'].max() * 0.9,
-        text="⚡ POTENCIAL<br>(Alto lift + Baja confidence)",
-        showarrow=False,
-        font=dict(size=10, color="orange"),
-        bgcolor="rgba(255, 215, 0, 0.3)",
-        bordercolor="orange"
+    fig_scatter.add_vline(
+        x=median_freq,
+        line_dash="dash",
+        line_color="gray",
+        annotation_text=f"Freq. Mediana: {median_freq:.0f}"
+    )
+    fig_scatter.add_hline(
+        y=median_value,
+        line_dash="dash",
+        line_color="gray",
+        annotation_text=f"Valor Mediano: €{median_value:.0f}"
     )
     
     fig_scatter.update_layout(height=600)
@@ -553,31 +541,31 @@ def mostrar_combos_cross_selling(df):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write("**🌟 Combos ESTRELLA (Alto lift + Alta confidence):**")
+        st.write("**🌟 Combos ESTRELLA (Alta freq + Alto valor):**")
         star_combos = df_filtered[
-            (df_filtered['lift'] > df_filtered['lift'].median()) &
-            (df_filtered['confidence_a_to_b'] > 50)
+            (df_filtered['times_bought_together'] > median_freq) &
+            (df_filtered['avg_basket_value'] > median_value)
         ].head(5)
         
         if not star_combos.empty:
             for _, row in star_combos.iterrows():
                 st.write(f"- **{row['product_a']}** + **{row['product_b']}**")
-                st.write(f"  Lift: {row['lift']:.2f} | Confidence: {row['confidence_a_to_b']:.1f}%")
+                st.write(f"  Comprados juntos: {row['times_bought_together']} veces | Valor: €{row['avg_basket_value']:.2f}")
         else:
             st.write("No hay combos en esta categoría con los filtros actuales")
     
     with col2:
-        st.write("**⚡ Combos POTENCIAL (Alto lift + Baja confidence):**")
-        potential_combos = df_filtered[
-            (df_filtered['lift'] > df_filtered['lift'].median()) &
-            (df_filtered['confidence_a_to_b'] <= 50)
+        st.write("**💎 Combos PREMIUM (Bajo volumen + Alto valor):**")
+        premium_combos = df_filtered[
+            (df_filtered['times_bought_together'] <= median_freq) &
+            (df_filtered['avg_basket_value'] > median_value)
         ].head(5)
         
-        if not potential_combos.empty:
-            for _, row in potential_combos.iterrows():
+        if not premium_combos.empty:
+            for _, row in premium_combos.iterrows():
                 st.write(f"- **{row['product_a']}** + **{row['product_b']}**")
-                st.write(f"  Lift: {row['lift']:.2f} | Confidence: {row['confidence_a_to_b']:.1f}%")
-            st.info("💡 Estos combos tienen sinergia pero baja frecuencia. Considera promocionarlos.")
+                st.write(f"  Comprados juntos: {row['times_bought_together']} veces | Valor: €{row['avg_basket_value']:.2f}")
+            st.info("💡 Productos premium con menor frecuencia pero alto valor.")
         else:
             st.write("No hay combos en esta categoría con los filtros actuales")
     
@@ -607,158 +595,115 @@ def mostrar_combos_cross_selling(df):
         st.plotly_chart(fig_value, use_container_width=True)
     
     with col2:
-        # Distribución de tamaño de basket
-        fig_basket_size = px.histogram(
-            df_filtered,
-            x='avg_basket_size',
-            nbins=20,
-            title='Distribución de Tamaño de Basket',
-            labels={'avg_basket_size': 'Productos por Carrito (Avg)'},
-            color_discrete_sequence=['steelblue']
+        # Top por frecuencia
+        top_freq = df_filtered.nlargest(15, 'times_bought_together')
+        
+        fig_freq = px.bar(
+            top_freq,
+            x='times_bought_together',
+            y='combo_label_short',
+            orientation='h',
+            title='Top 15 Combos Más Frecuentes',
+            labels={
+                'times_bought_together': 'Veces Comprados Juntos',
+                'combo_label_short': 'Combo'
+            },
+            color='times_bought_together',
+            color_continuous_scale='Blues'
         )
-        fig_basket_size.update_layout(height=500, showlegend=False)
-        st.plotly_chart(fig_basket_size, use_container_width=True)
+        fig_freq.update_layout(yaxis={'categoryorder': 'total ascending'}, height=500)
+        st.plotly_chart(fig_freq, use_container_width=True)
     
     # Análisis por dispositivo
     st.subheader("📱 Análisis por Dispositivo")
     
-    # Calcular porcentajes por dispositivo
-    df_filtered['desktop_pct'] = (df_filtered['desktop_purchases'] / df_filtered['times_bought_together'] * 100).round(1)
-    df_filtered['mobile_pct'] = (df_filtered['mobile_purchases'] / df_filtered['times_bought_together'] * 100).round(1)
-    df_filtered['tablet_pct'] = (df_filtered['tablet_purchases'] / df_filtered['times_bought_together'] * 100).round(1)
+    # Calcular totales
+    total_desktop = df_filtered['desktop_purchases'].sum()
+    total_mobile = df_filtered['mobile_purchases'].sum()
+    total_tablet = df_filtered['tablet_purchases'].sum()
+    total_purchases = total_desktop + total_mobile + total_tablet
     
-    # Promedios por dispositivo
-    avg_desktop = df_filtered['desktop_pct'].mean()
-    avg_mobile = df_filtered['mobile_pct'].mean()
-    avg_tablet = df_filtered['tablet_pct'].mean()
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Desktop", f"{avg_desktop:.1f}%")
-    with col2:
-        st.metric("Mobile", f"{avg_mobile:.1f}%")
-    with col3:
-        st.metric("Tablet", f"{avg_tablet:.1f}%")
-    
-    # Gráfico de distribución por dispositivo
-    device_data = pd.DataFrame({
-        'Dispositivo': ['Desktop', 'Mobile', 'Tablet'],
-        'Porcentaje': [avg_desktop, avg_mobile, avg_tablet]
-    })
-    
-    fig_device = px.pie(
-        device_data,
-        values='Porcentaje',
-        names='Dispositivo',
-        title='Distribución de Combos por Dispositivo',
-        color_discrete_sequence=px.colors.qualitative.Set3
-    )
-    st.plotly_chart(fig_device, use_container_width=True)
-    
-    # Network Graph de productos relacionados (Top 30 combos)
-    st.subheader("🕸️ Red de Productos Relacionados")
-    
-    st.info("""
-    💡 **Cómo leer este gráfico:**
-    - Cada nodo es un producto
-    - Las líneas conectan productos que se compran juntos
-    - Grosor de línea = Frecuencia del combo
-    - Color del nodo = Número de conexiones
-    """)
-    
-    # Preparar datos para network graph (Top 30 combos para no saturar)
-    top_network = df_filtered.head(30)
-    
-    # Crear edges y nodes
-    edges = []
-    nodes_set = set()
-    
-    for _, row in top_network.iterrows():
-        edges.append({
-            'source': row['product_a'],
-            'target': row['product_b'],
-            'weight': row['times_bought_together'],
-            'lift': row['lift']
+    if total_purchases > 0:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Desktop", f"{total_desktop:,}", f"{total_desktop/total_purchases*100:.1f}%")
+        with col2:
+            st.metric("Mobile", f"{total_mobile:,}", f"{total_mobile/total_purchases*100:.1f}%")
+        with col3:
+            st.metric("Tablet", f"{total_tablet:,}", f"{total_tablet/total_purchases*100:.1f}%")
+        
+        # Gráfico de distribución por dispositivo
+        device_data = pd.DataFrame({
+            'Dispositivo': ['Desktop', 'Mobile', 'Tablet'],
+            'Compras': [total_desktop, total_mobile, total_tablet]
         })
-        nodes_set.add(row['product_a'])
-        nodes_set.add(row['product_b'])
+        
+        fig_device = px.pie(
+            device_data,
+            values='Compras',
+            names='Dispositivo',
+            title='Distribución de Combos por Dispositivo',
+            color_discrete_sequence=px.colors.qualitative.Set3
+        )
+        st.plotly_chart(fig_device, use_container_width=True)
+    else:
+        st.info("No hay datos de dispositivo disponibles")
     
-    # Contar conexiones por nodo
-    node_connections = {}
-    for node in nodes_set:
-        connections = sum(1 for edge in edges if edge['source'] == node or edge['target'] == node)
-        node_connections[node] = connections
+    # Top productos en combos
+    st.subheader("🎯 Productos Más Presentes en Combos")
     
-    # Crear visualización con plotly (Sankey simplificado como aproximación)
-    st.write(f"**Mostrando red de {len(nodes_set)} productos con {len(edges)} conexiones**")
+    # Contar apariciones de cada producto
+    product_counts = {}
+    for _, row in df_filtered.iterrows():
+        product_counts[row['product_a']] = product_counts.get(row['product_a'], 0) + 1
+        product_counts[row['product_b']] = product_counts.get(row['product_b'], 0) + 1
     
-    # Tabla de edges para referencia
-    edges_df = pd.DataFrame(edges)
-    edges_df = edges_df.sort_values('weight', ascending=False)
-    
-    with st.expander("📋 Ver tabla de conexiones"):
-        st.dataframe(edges_df.style.format({
-            'weight': '{:,}',
-            'lift': '{:.2f}'
-        }), height=400)
-    
-    # Top productos "hub" (más conexiones)
-    st.subheader("🎯 Productos 'Ancla' (Más Conexiones)")
-    
-    hub_products = pd.DataFrame([
-        {'Producto': node, 'Conexiones': connections}
-        for node, connections in sorted(node_connections.items(), key=lambda x: x[1], reverse=True)[:10]
+    top_products = pd.DataFrame([
+        {'Producto': prod, 'Apariciones': count}
+        for prod, count in sorted(product_counts.items(), key=lambda x: x[1], reverse=True)[:15]
     ])
     
-    fig_hubs = px.bar(
-        hub_products,
-        x='Conexiones',
-        y='Producto',
-        orientation='h',
-        title='Top 10 Productos con Más Conexiones (Productos Ancla)',
-        labels={'Conexiones': 'Número de Combos', 'Producto': 'Producto'},
-        color='Conexiones',
-        color_continuous_scale='Purples'
-    )
-    fig_hubs.update_layout(yaxis={'categoryorder': 'total ascending'}, height=500)
-    st.plotly_chart(fig_hubs, use_container_width=True)
-    
-    st.info("""
-    **💡 Productos Ancla:**
-    - Generan muchas ventas adicionales
-    - Ideales para promociones "gateway"
-    - Colócalos estratégicamente en el sitio
-    - Úsalos como punto de entrada en bundles
-    """)
+    if not top_products.empty:
+        fig_products = px.bar(
+            top_products,
+            x='Apariciones',
+            y='Producto',
+            orientation='h',
+            title='Top 15 Productos Más Presentes en Combos (Productos Ancla)',
+            labels={'Apariciones': 'Número de Combos', 'Producto': 'Producto'},
+            color='Apariciones',
+            color_continuous_scale='Purples'
+        )
+        fig_products.update_layout(yaxis={'categoryorder': 'total ascending'}, height=500)
+        st.plotly_chart(fig_products, use_container_width=True)
+        
+        st.info("""
+        **💡 Productos Ancla:**
+        - Generan muchas ventas adicionales
+        - Ideales para promociones "gateway"
+        - Colócalos estratégicamente en el sitio
+        - Úsalos como punto de entrada en bundles
+        """)
     
     # Tabla detallada de combos
     st.subheader("📋 Tabla Detallada de Combos")
     
     display_df = df_filtered.head(50)[[
         'product_a', 'product_b', 'times_bought_together',
-        'lift', 'confidence_a_to_b', 'confidence_b_to_a',
-        'support', 'avg_basket_value', 'combo_strength_score'
+        'avg_basket_value', 'combo_strength_score'
     ]]
     
     st.dataframe(display_df.style.format({
         'times_bought_together': '{:,}',
-        'lift': '{:.2f}',
-        'confidence_a_to_b': '{:.1f}%',
-        'confidence_b_to_a': '{:.1f}%',
-        'support': '{:.2f}%',
         'avg_basket_value': '€{:,.2f}',
         'combo_strength_score': '{:.2f}'
-    }).background_gradient(subset=['lift'], cmap='RdYlGn', vmin=1, vmax=3), height=600)
+    }), height=600)
     
     # Recomendaciones accionables
     st.subheader("🎯 Recomendaciones Accionables")
     
     # Identificar mejores oportunidades
-    best_bundles = df_filtered[
-        (df_filtered['lift'] >= 2.0) &
-        (df_filtered['confidence_a_to_b'] >= 30) &
-        (df_filtered['times_bought_together'] >= 10)
-    ].head(5)
+    best_bundles = df_filtered.nlargest(5, 'combo_strength_score')
     
     col1, col2 = st.columns(2)
     
@@ -767,10 +712,9 @@ def mostrar_combos_cross_selling(df):
         if not best_bundles.empty:
             for _, row in best_bundles.iterrows():
                 st.write(f"**Bundle:** {row['product_a']} + {row['product_b']}")
-                st.write(f"- Lift: {row['lift']:.2f}x (¡Excelente sinergia!)")
-                st.write(f"- {row['confidence_a_to_b']:.0f}% de compradores de A también compran B")
+                st.write(f"- Comprados juntos: {row['times_bought_together']} veces")
                 st.write(f"- Valor promedio: €{row['avg_basket_value']:.2f}")
-                st.write(f"- Ya vendidos juntos {row['times_bought_together']} veces")
+                st.write(f"- Score: {row['combo_strength_score']:.1f}")
                 st.divider()
         else:
             st.write("Ajusta los filtros para encontrar bundles óptimos")
@@ -780,54 +724,44 @@ def mostrar_combos_cross_selling(df):
         st.markdown("""
         **En la página de producto:**
         - "Quién compró esto también compró..."
-        - Mostrar productos con Lift > 1.5
+        - Mostrar productos del combo
         
         **En el carrito:**
         - "Completa tu compra con..."
-        - Ofrecer productos con alta Confidence
+        - Ofrecer productos relacionados
         
         **Crear bundles físicos:**
-        - Pack productos con Lift > 2.0
+        - Pack productos más vendidos juntos
         - Descuento 10-15% vs compra individual
         
         **Email marketing:**
         - "Basado en tu compra de X, te recomendamos Y"
-        - Usar productos con alta Confidence
+        - Usar combos frecuentes
         
         **Layout de tienda:**
-        - Colocar productos relacionados cerca físicamente
-        - "Endcaps" con bundles sugeridos
+        - Colocar productos relacionados cerca
+        - Secciones de "Combos populares"
         """)
     
     # Estimación de impacto
     st.subheader("💰 Estimación de Impacto")
     
-    st.warning("""
-    **Escenario de implementación:**
-    
-    Si implementas cross-selling efectivo en los **Top 10 combos**:
-    """)
-    
     top_10_combos = df_filtered.head(10)
     
-    # Cálculos de impacto
-    total_product_a_sales = top_10_combos['product_a_transactions'].sum()
     current_combo_sales = top_10_combos['times_bought_together'].sum()
-    avg_confidence = top_10_combos['confidence_a_to_b'].mean()
-    
-    # Escenario: aumentar confidence en 15 puntos porcentuales
-    new_confidence = min(avg_confidence + 15, 100)
-    potential_new_combos = total_product_a_sales * (new_confidence / 100) - current_combo_sales
     avg_combo_value = top_10_combos['avg_basket_value'].mean()
+    
+    # Escenario: aumentar ventas de combos en 20%
+    potential_new_combos = current_combo_sales * 0.20
     potential_revenue = potential_new_combos * avg_combo_value
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Confidence Actual", f"{avg_confidence:.1f}%")
+        st.metric("Combos Actuales (Top 10)", f"{int(current_combo_sales)}")
     with col2:
-        st.metric("Confidence Objetivo", f"{new_confidence:.1f}%")
+        st.metric("Valor Promedio", f"€{avg_combo_value:.2f}")
     with col3:
-        st.metric("Combos Adicionales/Mes", f"+{int(potential_new_combos)}")
+        st.metric("Potencial +20%", f"+{int(potential_new_combos)} combos")
     
     st.success(f"""
     **💰 Revenue Adicional Estimado:**
@@ -835,85 +769,8 @@ def mostrar_combos_cross_selling(df):
     - **€{potential_revenue:,.0f}/mes** en ventas adicionales
     - **€{potential_revenue * 12:,.0f}/año** en revenue incremental
     
-    *Asumiendo un aumento de 15 puntos porcentuales en confidence mediante recomendaciones y bundles*
+    *Asumiendo un aumento del 20% mediante cross-selling efectivo*
     """)
-    
-    # Análisis de estacionalidad/tendencias (si hay suficientes datos)
-    st.subheader("📊 Insights Adicionales")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.write("**🔥 Combos de Alto Impacto:**")
-        high_impact = df_filtered[
-            df_filtered['combined_revenue'] > df_filtered['combined_revenue'].quantile(0.75)
-        ].head(5)
-        
-        if not high_impact.empty:
-            for _, row in high_impact.iterrows():
-                st.write(f"- **{row['product_a'][:30]}** + **{row['product_b'][:30]}**")
-                st.write(f"  Revenue combinado: €{row['combined_revenue']:,.0f}")
-        else:
-            st.write("No hay datos suficientes")
-    
-    with col2:
-        st.write("**⚠️ Oportunidades Perdidas:**")
-        st.markdown("""
-        Productos con alto volumen individual pero **sin** combos fuertes:
-        """)
-        
-        # Identificar productos solitarios (aparecen poco en combos)
-        all_products_in_combos = set(df_filtered['product_a'].unique()) | set(df_filtered['product_b'].unique())
-        
-        st.info(f"""
-        De {len(all_products_in_combos)} productos en combos:
-        - {len(df_filtered[df_filtered['lift'] >= 2])} tienen sinergia fuerte (Lift ≥ 2)
-        - {len(df_filtered[(df_filtered['lift'] >= 1) & (df_filtered['lift'] < 2)])} tienen sinergia moderada
-        
-        💡 **Acción**: Identifica productos con alto volumen pero sin combos fuertes
-        y crea bundles estratégicos manualmente
-        """)
-    
-    # Comparativa: Bidireccionalidad
-    st.subheader("🔄 Análisis de Bidireccionalidad")
-    
-    st.info("""
-    **¿La relación A→B es simétrica?**
-    
-    Algunos combos son bidireccionales (A lleva a B, B lleva a A), otros no.
-    """)
-    
-    # Calcular diferencia entre confidence A→B y B→A
-    df_filtered['confidence_diff'] = abs(df_filtered['confidence_a_to_b'] - df_filtered['confidence_b_to_a'])
-    df_filtered['bidirectional'] = df_filtered['confidence_diff'] < 10  # Diferencia < 10% = bidireccional
-    
-    bidirectional_count = df_filtered['bidirectional'].sum()
-    unidirectional_count = len(df_filtered) - bidirectional_count
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.metric("Combos Bidireccionales", f"{bidirectional_count} ({bidirectional_count/len(df_filtered)*100:.1f}%)")
-        st.caption("A→B y B→A tienen confidence similar")
-    
-    with col2:
-        st.metric("Combos Unidireccionales", f"{unidirectional_count} ({unidirectional_count/len(df_filtered)*100:.1f}%)")
-        st.caption("Relación asimétrica (A→B ≠ B→A)")
-    
-    # Ejemplo de combos unidireccionales
-    unidirectional_combos = df_filtered[df_filtered['confidence_diff'] > 20].head(5)
-    
-    if not unidirectional_combos.empty:
-        st.write("**Ejemplos de Relaciones Asimétricas:**")
-        for _, row in unidirectional_combos.iterrows():
-            if row['confidence_a_to_b'] > row['confidence_b_to_a']:
-                st.write(f"- **{row['product_a']}** → **{row['product_b']}**: {row['confidence_a_to_b']:.1f}%")
-                st.write(f"  (Pero **{row['product_b']}** → **{row['product_a']}**: solo {row['confidence_b_to_a']:.1f}%)")
-            else:
-                st.write(f"- **{row['product_b']}** → **{row['product_a']}**: {row['confidence_b_to_a']:.1f}%")
-                st.write(f"  (Pero **{row['product_a']}** → **{row['product_b']}**: solo {row['confidence_a_to_b']:.1f}%)")
-        
-        st.info("💡 **Estrategia**: En relaciones asimétricas, enfoca el cross-sell en la dirección más fuerte")
     
     # Exportar datos
     st.subheader("📥 Exportar Datos")
@@ -932,17 +789,12 @@ def mostrar_combos_cross_selling(df):
         )
     
     with col2:
-        # CSV solo top combos para implementar
-        top_for_implementation = df_filtered[
-            (df_filtered['lift'] >= 1.5) &
-            (df_filtered['confidence_a_to_b'] >= 25)
-        ].head(20)
-        
-        csv_top = top_for_implementation[['product_a', 'product_b', 'lift', 'confidence_a_to_b', 'times_bought_together']].to_csv(index=False)
+        # CSV top combos
+        csv_top = df_filtered.head(20).to_csv(index=False)
         st.download_button(
-            label="⭐ Descargar Top Combos para Implementar (CSV)",
+            label="⭐ Descargar Top 20 Combos (CSV)",
             data=csv_top,
-            file_name="combos_top_para_implementar.csv",
+            file_name="combos_top_20.csv",
             mime="text/csv",
             use_container_width=True
         )
