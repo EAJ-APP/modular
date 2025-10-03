@@ -156,7 +156,7 @@ def generar_query_funnel_por_producto(project, dataset, start_date, end_date):
 def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
     """
     Consulta OPTIMIZADA para análisis de combos y cross-selling
-    Versión mejorada con mejor rendimiento para evitar timeouts
+    Versión corregida sin ambigüedades
     """
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
@@ -190,7 +190,7 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
       SELECT
         transaction_id,
         COUNT(DISTINCT item_id) AS items_in_transaction,
-        AVG(transaction_revenue) AS transaction_revenue
+        MAX(transaction_revenue) AS trans_revenue  -- Cambiado para evitar ambigüedad
       FROM purchase_items
       GROUP BY transaction_id
       HAVING items_in_transaction >= 2  -- Solo transacciones multi-producto
@@ -199,9 +199,17 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
     -- Filtrar solo transacciones multi-producto
     multi_product_items AS (
       SELECT
-        p.*,
+        p.transaction_id,
+        p.item_id,
+        p.item_name,
+        p.item_category,
+        p.quantity,
+        p.item_revenue,
+        p.user_pseudo_id,
+        p.device_category,
+        p.utm_source,
         tc.items_in_transaction,
-        tc.transaction_revenue
+        tc.trans_revenue AS transaction_revenue  -- Alias claro
       FROM purchase_items p
       INNER JOIN transaction_counts tc
         ON p.transaction_id = tc.transaction_id
@@ -224,10 +232,10 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
       SELECT
         a.item_name AS product_a,
         b.item_name AS product_b,
-        a.transaction_id,
-        a.transaction_revenue,
-        a.items_in_transaction,
-        a.device_category
+        a.transaction_id AS pair_transaction_id,
+        a.transaction_revenue AS pair_transaction_revenue,
+        a.items_in_transaction AS pair_items_count,
+        a.device_category AS pair_device
       FROM multi_product_items a
       INNER JOIN multi_product_items b 
         ON a.transaction_id = b.transaction_id
@@ -242,12 +250,12 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
       SELECT
         product_a,
         product_b,
-        COUNT(DISTINCT transaction_id) AS times_bought_together,
-        AVG(transaction_revenue) AS avg_basket_value,
-        AVG(items_in_transaction) AS avg_basket_size,
-        COUNTIF(device_category = 'desktop') AS desktop_purchases,
-        COUNTIF(device_category = 'mobile') AS mobile_purchases,
-        COUNTIF(device_category = 'tablet') AS tablet_purchases
+        COUNT(DISTINCT pair_transaction_id) AS times_bought_together,
+        AVG(pair_transaction_revenue) AS avg_basket_value,
+        AVG(pair_items_count) AS avg_basket_size,
+        COUNTIF(pair_device = 'desktop') AS desktop_purchases,
+        COUNTIF(pair_device = 'mobile') AS mobile_purchases,
+        COUNTIF(pair_device = 'tablet') AS tablet_purchases
       FROM product_pairs
       GROUP BY product_a, product_b
       HAVING times_bought_together >= 3  -- Mínimo 3 co-ocurrencias
@@ -346,5 +354,5 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
     FROM combo_analysis
     WHERE lift >= 1.0  -- Solo combos con sinergia positiva
     ORDER BY combo_strength_score DESC, times_bought_together DESC
-    LIMIT 200  -- Reducido de 500 a 200 para mejor rendimiento
+    LIMIT 200
     """
