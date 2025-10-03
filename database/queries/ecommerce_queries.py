@@ -155,18 +155,17 @@ def generar_query_funnel_por_producto(project, dataset, start_date, end_date):
     """
 def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
     """
-    Consulta para análisis de combos y cross-selling
-    Identifica qué productos se compran juntos con más frecuencia
-    Market Basket Analysis para optimizar recomendaciones y bundles
+    Consulta OPTIMIZADA para análisis de combos y cross-selling
+    Versión mejorada con mejor rendimiento para evitar timeouts
     """
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
     return f"""
-    -- Análisis de Combos y Cross-Selling (Market Basket Analysis)
+    -- Análisis de Combos y Cross-Selling (OPTIMIZADO)
     
-    WITH purchase_transactions AS (
-      -- Extraer todas las transacciones con sus items
+    WITH purchase_items AS (
+      -- Extraer items de compras con filtro temprano
       SELECT
         ecommerce.transaction_id,
         items.item_id,
@@ -175,11 +174,9 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
         items.quantity,
         items.item_revenue,
         ecommerce.purchase_revenue AS transaction_revenue,
-        COUNT(items.item_id) OVER (PARTITION BY ecommerce.transaction_id) AS items_in_transaction,
         user_pseudo_id,
         device.category AS device_category,
-        traffic_source.source AS utm_source,
-        traffic_source.medium AS utm_medium
+        traffic_source.source AS utm_source
       FROM `{project}.{dataset}.events_*`,
         UNNEST(items) AS items
       WHERE _TABLE_SUFFIX BETWEEN '{start_date_str}' AND '{end_date_str}'
@@ -188,19 +185,41 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
         AND items.item_name IS NOT NULL
     ),
     
-    -- Calcular métricas base por producto
+    -- Contar items por transacción
+    transaction_counts AS (
+      SELECT
+        transaction_id,
+        COUNT(DISTINCT item_id) AS items_in_transaction,
+        AVG(transaction_revenue) AS transaction_revenue
+      FROM purchase_items
+      GROUP BY transaction_id
+      HAVING items_in_transaction >= 2  -- Solo transacciones multi-producto
+    ),
+    
+    -- Filtrar solo transacciones multi-producto
+    multi_product_items AS (
+      SELECT
+        p.*,
+        tc.items_in_transaction,
+        tc.transaction_revenue
+      FROM purchase_items p
+      INNER JOIN transaction_counts tc
+        ON p.transaction_id = tc.transaction_id
+    ),
+    
+    -- Calcular métricas base por producto (solo productos en combos)
     product_metrics AS (
       SELECT
         item_name,
         COUNT(DISTINCT transaction_id) AS total_transactions,
         SUM(quantity) AS total_quantity,
-        SUM(item_revenue) AS total_revenue,
-        AVG(item_revenue) AS avg_item_revenue
-      FROM purchase_transactions
+        SUM(item_revenue) AS total_revenue
+      FROM multi_product_items
       GROUP BY item_name
+      HAVING total_transactions >= 5  -- Filtrar productos con bajo volumen
     ),
     
-    -- Identificar pares de productos en la misma transacción
+    -- Crear pares de productos (OPTIMIZADO con filtro de productos)
     product_pairs AS (
       SELECT
         a.item_name AS product_a,
@@ -208,16 +227,17 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
         a.transaction_id,
         a.transaction_revenue,
         a.items_in_transaction,
-        a.device_category,
-        a.utm_source
-      FROM purchase_transactions a
-      JOIN purchase_transactions b 
+        a.device_category
+      FROM multi_product_items a
+      INNER JOIN multi_product_items b 
         ON a.transaction_id = b.transaction_id
-        AND a.item_id < b.item_id  -- Evitar duplicados (A,B) y (B,A)
+        AND a.item_id < b.item_id  -- Evitar duplicados
+      INNER JOIN product_metrics pm_a ON a.item_name = pm_a.item_name
+      INNER JOIN product_metrics pm_b ON b.item_name = pm_b.item_name
       WHERE a.item_name != b.item_name
     ),
     
-    -- Calcular métricas de asociación
+    -- Calcular métricas de combos
     combo_metrics AS (
       SELECT
         product_a,
@@ -225,20 +245,21 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
         COUNT(DISTINCT transaction_id) AS times_bought_together,
         AVG(transaction_revenue) AS avg_basket_value,
         AVG(items_in_transaction) AS avg_basket_size,
-        
-        -- Métricas por dispositivo
         COUNTIF(device_category = 'desktop') AS desktop_purchases,
         COUNTIF(device_category = 'mobile') AS mobile_purchases,
-        COUNTIF(device_category = 'tablet') AS tablet_purchases,
-        
-        -- Top fuente de tráfico para este combo
-        APPROX_TOP_COUNT(utm_source, 1)[OFFSET(0)].value AS top_traffic_source
-        
+        COUNTIF(device_category = 'tablet') AS tablet_purchases
       FROM product_pairs
       GROUP BY product_a, product_b
+      HAVING times_bought_together >= 3  -- Mínimo 3 co-ocurrencias
     ),
     
-    -- Calcular métricas de asociación avanzadas
+    -- Total de transacciones para cálculos
+    total_transactions AS (
+      SELECT COUNT(DISTINCT transaction_id) AS total
+      FROM multi_product_items
+    ),
+    
+    -- Calcular métricas de asociación
     combo_analysis AS (
       SELECT
         cm.product_a,
@@ -249,51 +270,44 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
         cm.desktop_purchases,
         cm.mobile_purchases,
         cm.tablet_purchases,
-        cm.top_traffic_source,
         
-        -- Métricas individuales de cada producto
         pm_a.total_transactions AS product_a_transactions,
         pm_b.total_transactions AS product_b_transactions,
         pm_a.total_revenue AS product_a_revenue,
         pm_b.total_revenue AS product_b_revenue,
+        tt.total AS total_transactions,
         
         -- Lift: ¿Comprar A aumenta probabilidad de comprar B?
-        -- Lift > 1 significa que hay sinergia positiva
         ROUND(
           SAFE_DIVIDE(
-            cm.times_bought_together,
-            SAFE_DIVIDE(
-              pm_a.total_transactions * pm_b.total_transactions,
-              (SELECT COUNT(DISTINCT transaction_id) FROM purchase_transactions)
-            )
+            cm.times_bought_together * tt.total,
+            pm_a.total_transactions * pm_b.total_transactions
           ),
           2
         ) AS lift,
         
-        -- Confidence: De los que compraron A, ¿qué % también compró B?
+        -- Confidence A→B: De los que compraron A, ¿qué % también compró B?
         ROUND(
           SAFE_DIVIDE(cm.times_bought_together, pm_a.total_transactions) * 100,
           2
         ) AS confidence_a_to_b,
         
-        -- Confidence inversa: De los que compraron B, ¿qué % también compró A?
+        -- Confidence B→A
         ROUND(
           SAFE_DIVIDE(cm.times_bought_together, pm_b.total_transactions) * 100,
           2
         ) AS confidence_b_to_a,
         
-        -- Support: ¿Qué % del total de transacciones incluyen ambos productos?
+        -- Support: % del total con ambos productos
         ROUND(
-          SAFE_DIVIDE(
-            cm.times_bought_together,
-            (SELECT COUNT(DISTINCT transaction_id) FROM purchase_transactions)
-          ) * 100,
+          SAFE_DIVIDE(cm.times_bought_together, tt.total) * 100,
           2
         ) AS support
         
       FROM combo_metrics cm
-      JOIN product_metrics pm_a ON cm.product_a = pm_a.item_name
-      JOIN product_metrics pm_b ON cm.product_b = pm_b.item_name
+      INNER JOIN product_metrics pm_a ON cm.product_a = pm_a.item_name
+      INNER JOIN product_metrics pm_b ON cm.product_b = pm_b.item_name
+      CROSS JOIN total_transactions tt
     )
     
     SELECT
@@ -303,29 +317,25 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
       avg_basket_value,
       avg_basket_size,
       
-      -- Métricas de asociación (Market Basket)
+      -- Métricas de asociación
       lift,
       confidence_a_to_b,
       confidence_b_to_a,
       support,
       
-      -- Revenue potencial del combo
+      -- Revenue combinado
       ROUND(product_a_revenue + product_b_revenue, 2) AS combined_revenue,
       
-      -- Métricas por dispositivo
+      -- Dispositivos
       desktop_purchases,
       mobile_purchases,
       tablet_purchases,
       
-      -- Fuente de tráfico principal
-      top_traffic_source,
-      
-      -- Transacciones individuales de cada producto
+      -- Transacciones individuales
       product_a_transactions,
       product_b_transactions,
       
-      -- Strength Score (métrica combinada para ranking)
-      -- Combina lift, confidence y frecuencia
+      -- Strength Score (métrica combinada)
       ROUND(
         (lift * 0.4) + 
         (confidence_a_to_b * 0.3) + 
@@ -334,8 +344,7 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
       ) AS combo_strength_score
       
     FROM combo_analysis
-    WHERE times_bought_together >= 3  -- Filtrar combos con al menos 3 co-ocurrencias
-      AND lift >= 1.0  -- Solo combos con lift positivo
+    WHERE lift >= 1.0  -- Solo combos con sinergia positiva
     ORDER BY combo_strength_score DESC, times_bought_together DESC
-    LIMIT 500
+    LIMIT 200  -- Reducido de 500 a 200 para mejor rendimiento
     """
