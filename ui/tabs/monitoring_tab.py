@@ -4,7 +4,7 @@ from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 
-def show_monitoring_tab():
+def show_monitoring_tab(client=None, project=None):
     """Pestaña de Monitorización de Consultas BigQuery"""
     
     st.title("📊 Monitorización de Consultas BigQuery")
@@ -13,6 +13,8 @@ def show_monitoring_tab():
     Esta pestaña muestra información sobre las consultas ejecutadas en la sesión actual,
     incluyendo duración, consumo de datos y estado de ejecución.
     """)
+    
+    # Resto del código igual...
     
     # Verificar si hay datos de monitorización
     if 'monitoring_data' not in st.session_state:
