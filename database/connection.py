@@ -119,5 +119,72 @@ def run_query_with_estimate(client, query, timeout=30):
             elif estimate['total_gb'] > 50:
                 st.error(f"🚨 Consulta muy grande: {estimate['total_gb']:.2f} GB. Considera filtrar más datos.")
     
-    # Ejecutar la consulta con estadísticas
-    return run_query(client, query, timeout=timeout, show_stats=True)
+def run_query(client, query, query_name="Consulta sin nombre"):
+    """
+    Ejecuta una consulta en BigQuery y registra métricas de monitorización
+    
+    Args:
+        client: Cliente de BigQuery
+        query: Query SQL a ejecutar
+        query_name: Nombre descriptivo de la consulta para monitorización
+    
+    Returns:
+        pandas.DataFrame con los resultados
+    """
+    from datetime import datetime
+    import streamlit as st
+    
+    # Inicializar monitoring_data si no existe
+    if 'monitoring_data' not in st.session_state:
+        st.session_state.monitoring_data = []
+    
+    start_time = datetime.now()
+    
+    try:
+        # Ejecutar query
+        query_job = client.query(query)
+        df = query_job.to_dataframe()
+        
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+        
+        # Obtener GB procesados
+        bytes_processed = query_job.total_bytes_processed or 0
+        gb_used = bytes_processed / (1024 ** 3)  # Convertir a GB
+        
+        # Registrar en monitorización
+        monitoring_entry = {
+            'query_name': query_name,
+            'timestamp': start_time,
+            'duration': duration,
+            'gb_used': gb_used,
+            'status': 'Success',
+            'rows_returned': len(df)
+        }
+        
+        st.session_state.monitoring_data.append(monitoring_entry)
+        
+        print(f"✅ Query registrada: {query_name} - {duration:.2f}s - {gb_used:.3f}GB")
+        
+        return df
+        
+    except Exception as e:
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+        
+        # Registrar error en monitorización
+        monitoring_entry = {
+            'query_name': query_name,
+            'timestamp': start_time,
+            'duration': duration,
+            'gb_used': 0,
+            'status': 'Error',
+            'error_message': str(e)
+        }
+        
+        st.session_state.monitoring_data.append(monitoring_entry)
+        
+        print(f"❌ Query con error: {query_name} - {str(e)}")
+        
+        # Re-lanzar la excepción para que sea manejada por el caller
+        raise e
