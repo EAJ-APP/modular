@@ -50,6 +50,9 @@ __all__ = [
     'generar_query_consentimiento_basico',
     'generar_query_consentimiento_por_dispositivo',
     'generar_query_consentimiento_real',
+    'generar_query_evolucion_temporal_consentimiento',    
+    'generar_query_consentimiento_por_geografia',         
+    'generar_query_consentimiento_por_fuente_trafico',    
     # Ecommerce
     'generar_query_comparativa_eventos',
     'generar_query_ingresos_transacciones',
