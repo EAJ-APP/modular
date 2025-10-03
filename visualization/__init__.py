@@ -12,7 +12,8 @@ from .ecommerce_visualizations import (
     mostrar_ingresos_transacciones,
     mostrar_productos_mas_vendidos,
     mostrar_relacion_productos,
-    mostrar_funnel_por_producto
+    mostrar_funnel_por_producto,
+    mostrar_combos_cross_selling
 )
 
 from .acquisition_visualizations import (
@@ -66,6 +67,7 @@ __all__ = [
     'mostrar_productos_mas_vendidos',
     'mostrar_relacion_productos',
     'mostrar_funnel_por_producto',
+    'mostrar_combos_cross_selling',
     # Acquisition
     'mostrar_canales_trafico',
     'mostrar_atribucion_marketing',
