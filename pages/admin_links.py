@@ -40,6 +40,15 @@ st.markdown("**Panel de administración** - Crea y gestiona accesos restringidos
 # Verificar autenticación de admin
 if not AccessManager.is_admin():
     st.warning("🔒 Acceso Restringido - Requiere autenticación de administrador")
+    
+    # DEBUG INFO - Añadido cerca de la línea 44
+    with st.expander("🔍 Debug Info"):
+        try:
+            stored_password = st.secrets.get("admin_password", "admin123")
+            st.write(f"Contraseña configurada: {stored_password[:3]}... (primeros 3 caracteres)")
+            st.write(f"Longitud: {len(stored_password)} caracteres")
+        except Exception as e:
+            st.error(f"Error leyendo secret: {e}")
         
     with st.form("admin_login"):
         password = st.text_input("Contraseña de Administrador:", type="password")
@@ -63,7 +72,7 @@ if not AccessManager.is_admin():
     
     # Botón para volver
     if st.button("🏠 Volver a Login Principal"):
-        st.switch_page("ui/login_screen.py")
+        st.switch_page("main.py")
     
     st.stop()
 
@@ -405,10 +414,9 @@ with tab3:
     
     st.markdown("""
     Para configurar la URL base, añade esto a tus **Secrets de Streamlit**:
-    
-    ```toml
+```toml
     app_url = "https://tu-app.streamlit.app"
-    ```
+```
     """)
     
     st.divider()
@@ -427,10 +435,9 @@ with tab3:
     
     st.markdown("""
     Para configurar una contraseña personalizada, añade esto a tus **Secrets**:
-    
-    ```toml
+```toml
     admin_password = "tu_password_seguro"
-    ```
+```
     """)
     
     st.divider()
