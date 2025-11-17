@@ -119,9 +119,33 @@ if not access_data:
 
 # Token válido - Configurar acceso
 client_name = access_data['client_name']
-project_id = access_data['project_id']
-dataset_id = access_data['dataset_id']
+project_id = access_data.get('project_id')
+dataset_id = access_data.get('dataset_id')
 allowed_tabs = access_data['allowed_tabs']
+oauth_status = access_data.get('oauth_status', 'not_required')
+
+# Verificar que el token OAuth esté completamente configurado
+if oauth_status in ['pending', 'authorized']:
+    st.warning("⚠️ Token pendiente de configuración")
+    st.info("""
+    **Token en proceso de configuración**
+
+    Este token requiere autorización OAuth del cliente y configuración del administrador.
+
+    **Estado actual:**
+    """ + ("⏳ Esperando autorización del cliente" if oauth_status == 'pending' else "⏳ Esperando configuración del administrador"))
+
+    st.markdown("""
+    Por favor, contacta al administrador para completar la configuración.
+    """)
+    st.stop()
+
+# Verificar que tengamos project_id y dataset_id
+if not project_id or not dataset_id:
+    st.error("❌ Error de Configuración")
+    st.warning("Este token no tiene proyecto/dataset configurado.")
+    st.info("Por favor, contacta al administrador.")
+    st.stop()
 
 # Banner de bienvenida personalizado
 st.markdown(f"""
@@ -186,18 +210,46 @@ with st.sidebar:
     st.caption("FLAT 101 Digital Business")
     st.caption("📧 contacto@flat101.es")
 
-# Crear cliente de BigQuery con credenciales del sistema
+# Crear cliente de BigQuery
 try:
-    # Usar service account desde secrets
-    creds_dict = dict(st.secrets["gcp_service_account"])
-    credentials = service_account.Credentials.from_service_account_info(creds_dict)
-    client = bigquery.Client(
-        credentials=credentials,
-        project=project_id  # Usar el proyecto del cliente
-    )
+    # Verificar si el token tiene credenciales OAuth
+    oauth_credentials_dict = access_data.get('oauth_credentials')
+
+    if oauth_credentials_dict and oauth_status == 'configured':
+        # Usar credenciales OAuth del cliente
+        from auth import OAuthHandler
+        from google.oauth2.credentials import Credentials
+
+        # Convertir diccionario a Credentials
+        credentials = OAuthHandler.dict_to_credentials(oauth_credentials_dict)
+
+        # Refrescar si es necesario
+        credentials = OAuthHandler.refresh_credentials(credentials)
+
+        # Crear cliente con las credenciales del cliente
+        client = bigquery.Client(
+            credentials=credentials,
+            project=project_id
+        )
+
+        # Mostrar info en sidebar de que se están usando credenciales OAuth
+        with st.sidebar:
+            st.success("🔐 Usando credenciales OAuth del cliente")
+
+    else:
+        # Usar service account desde secrets (flujo tradicional)
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        credentials = service_account.Credentials.from_service_account_info(creds_dict)
+        client = bigquery.Client(
+            credentials=credentials,
+            project=project_id
+        )
+
 except Exception as e:
     st.error(f"❌ Error conectando a BigQuery: {str(e)}")
     st.info("Por favor, contacta con el administrador del sistema.")
+    with st.expander("🔍 Ver detalles técnicos"):
+        st.code(str(e))
     st.stop()
 
 # Obtener funciones de tabs
