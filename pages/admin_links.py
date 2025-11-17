@@ -40,7 +40,13 @@ st.markdown("**Panel de administración** - Crea y gestiona accesos restringidos
 # Verificar autenticación de admin
 if not AccessManager.is_admin():
     st.warning("🔒 Acceso Restringido - Requiere autenticación de administrador")
-    
+    with st.expander("🔍 Debug Info"):
+    try:
+        stored_password = st.secrets.get("admin_password", "admin123")
+        st.write(f"Contraseña configurada: {stored_password[:3]}... (primeros 3 caracteres)")
+    except Exception as e:
+        st.error(f"Error leyendo secret: {e}")
+        
     with st.form("admin_login"):
         password = st.text_input("Contraseña de Administrador:", type="password")
         submit = st.form_submit_button("Acceder")
