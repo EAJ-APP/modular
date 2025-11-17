@@ -139,29 +139,51 @@ tab1, tab2, tab3 = st.tabs([
 # ==========================================
 with tab1:
     st.subheader("➕ Crear Nuevo Enlace de Acceso")
-    
+
     with st.form("create_access_form"):
+        # Selector de tipo de enlace
+        require_oauth = st.checkbox(
+            "🔐 Requiere OAuth del Cliente",
+            value=False,
+            help="Si activas esto, el cliente deberá autorizar con su cuenta de Google antes de que puedas configurar el acceso"
+        )
+
+        if require_oauth:
+            st.info("""
+            **Flujo con OAuth:**
+            1. Creas el token con el nombre del cliente
+            2. Envías el enlace de OAuth al cliente
+            3. El cliente autoriza con su cuenta de Google
+            4. Tú configuras el proyecto/dataset después de la autorización
+            5. Usas el enlace final para acceder a sus datos
+            """)
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             client_name = st.text_input(
                 "Nombre del Cliente *",
                 placeholder="Ej: Empresa XYZ",
                 help="Nombre identificativo del cliente"
             )
-            
-            project_id = st.text_input(
-                "Project ID de BigQuery *",
-                placeholder="Ej: mi-proyecto-analytics",
-                help="ID del proyecto BigQuery al que tendrá acceso"
-            )
-            
-            dataset_id = st.text_input(
-                "Dataset ID *",
-                placeholder="Ej: analytics_123456789",
-                help="ID del dataset GA4 específico"
-            )
-        
+
+            if not require_oauth:
+                project_id = st.text_input(
+                    "Project ID de BigQuery *",
+                    placeholder="Ej: mi-proyecto-analytics",
+                    help="ID del proyecto BigQuery al que tendrá acceso"
+                )
+
+                dataset_id = st.text_input(
+                    "Dataset ID *",
+                    placeholder="Ej: analytics_123456789",
+                    help="ID del dataset GA4 específico"
+                )
+            else:
+                project_id = None
+                dataset_id = None
+                st.info("ℹ️ Configurarás el proyecto/dataset después de que el cliente autorice")
+
         with col2:
             expiration_days = st.number_input(
                 "Días de Vigencia *",
@@ -170,32 +192,39 @@ with tab1:
                 value=30,
                 help="Días hasta que expire el enlace"
             )
-            
-            # Selector de tabs permitidos
-            tab_options = AccessManager.get_tab_display_names()
-            
-            allowed_tabs = st.multiselect(
-                "Tabs Permitidos *",
-                options=list(tab_options.keys()),
-                format_func=lambda x: tab_options[x],
-                default=['ecommerce', 'acquisition'],
-                help="Selecciona los análisis que puede ver el cliente"
-            )
-            
+
+            if not require_oauth:
+                # Selector de tabs permitidos
+                tab_options = AccessManager.get_tab_display_names()
+
+                allowed_tabs = st.multiselect(
+                    "Tabs Permitidos *",
+                    options=list(tab_options.keys()),
+                    format_func=lambda x: tab_options[x],
+                    default=['ecommerce', 'acquisition'],
+                    help="Selecciona los análisis que puede ver el cliente"
+                )
+            else:
+                # Para OAuth, permitir todos los tabs por defecto (el admin puede cambiar después)
+                allowed_tabs = list(AccessManager.get_tab_display_names().keys())
+                st.info(f"ℹ️ Tabs permitidos por defecto: Todos ({len(allowed_tabs)})")
+
             notes = st.text_area(
                 "Notas (Opcional)",
                 placeholder="Información adicional sobre este acceso...",
                 height=100
             )
-        
+
         # Botón de crear
         submitted = st.form_submit_button("🔗 Crear Enlace de Acceso", use_container_width=True)
-        
+
         if submitted:
             # Validaciones
-            if not client_name or not project_id or not dataset_id:
+            if not client_name:
+                st.error("❌ Por favor ingresa el nombre del cliente")
+            elif not require_oauth and (not project_id or not dataset_id):
                 st.error("❌ Por favor completa todos los campos obligatorios (*)")
-            elif not allowed_tabs:
+            elif not require_oauth and not allowed_tabs:
                 st.error("❌ Debes seleccionar al menos un tab permitido")
             else:
                 # Crear acceso
@@ -206,48 +235,68 @@ with tab1:
                         dataset_id=dataset_id,
                         allowed_tabs=allowed_tabs,
                         expiration_days=expiration_days,
-                        notes=notes
+                        notes=notes,
+                        require_oauth=require_oauth
                     )
-                    
+
                     st.success("✅ ¡Enlace creado exitosamente!")
-                    
-                    # Mostrar el enlace generado
-                    access_url = AccessManager.get_access_url(access_data['token'])
-                    
-                    st.markdown("### 🔗 Enlace de Acceso Generado:")
-                    st.code(access_url, language=None)
-                    
-                    # Información del acceso
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
+
+                    if require_oauth:
+                        # Mostrar enlace de OAuth
+                        oauth_url = AccessManager.get_oauth_url(access_data['token'])
+
+                        st.markdown("### 🔐 Enlace de Autorización OAuth:")
+                        st.markdown("**Envía este enlace al cliente para que autorice el acceso:**")
+                        st.code(oauth_url, language=None)
+
                         st.info(f"**Cliente:** {client_name}")
-                    with col2:
-                        st.info(f"**Proyecto:** {project_id}")
-                    with col3:
-                        expiration = datetime.fromisoformat(access_data['expiration_date'])
-                        st.info(f"**Expira:** {expiration.strftime('%d/%m/%Y')}")
-                    
-                    # Botón para copiar
-                    st.markdown(f"""
-                    <a href="{access_url}" target="_blank">
-                        <button style="
-                            background-color:#4CAF50;
-                            color:white;
-                            padding:12px 24px;
-                            border:none;
-                            border-radius:8px;
-                            cursor:pointer;
-                            font-size:16px;
-                            width:100%;
-                            margin-top:10px;
-                        ">
-                            🚀 Abrir Enlace en Nueva Pestaña
-                        </button>
-                    </a>
-                    """, unsafe_allow_html=True)
-                    
+                        st.warning("⏳ **Estado:** Pendiente de autorización del cliente")
+
+                        st.markdown("""
+                        **Próximos pasos:**
+                        1. 📧 Envía el enlace de arriba al cliente
+                        2. ⏳ Espera a que el cliente autorice con su cuenta de Google
+                        3. ✅ Cuando esté autorizado, podrás configurar el proyecto/dataset en la pestaña "Enlaces Existentes"
+                        4. 🚀 Usa el enlace final para acceder a los datos del cliente
+                        """)
+                    else:
+                        # Mostrar el enlace generado (flujo tradicional)
+                        access_url = AccessManager.get_access_url(access_data['token'])
+
+                        st.markdown("### 🔗 Enlace de Acceso Generado:")
+                        st.code(access_url, language=None)
+
+                        # Información del acceso
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.info(f"**Cliente:** {client_name}")
+                        with col2:
+                            st.info(f"**Proyecto:** {project_id}")
+                        with col3:
+                            expiration = datetime.fromisoformat(access_data['expiration_date'])
+                            st.info(f"**Expira:** {expiration.strftime('%d/%m/%Y')}")
+
+                        # Botón para copiar
+                        st.markdown(f"""
+                        <a href="{access_url}" target="_blank">
+                            <button style="
+                                background-color:#4CAF50;
+                                color:white;
+                                padding:12px 24px;
+                                border:none;
+                                border-radius:8px;
+                                cursor:pointer;
+                                font-size:16px;
+                                width:100%;
+                                margin-top:10px;
+                            ">
+                                🚀 Abrir Enlace en Nueva Pestaña
+                            </button>
+                        </a>
+                        """, unsafe_allow_html=True)
+
                     st.balloons()
-                    
+
                 except Exception as e:
                     st.error(f"❌ Error creando el acceso: {str(e)}")
 
@@ -269,7 +318,7 @@ with tab2:
         for token, data in tokens.items():
             expiration = datetime.fromisoformat(data['expiration_date'])
             created = datetime.fromisoformat(data['created_at'])
-            
+
             # Determinar estado
             if not data.get('active', False):
                 status = "🔴 Revocado"
@@ -278,12 +327,24 @@ with tab2:
             else:
                 days_left = (expiration - datetime.now()).days
                 status = f"✅ Activo ({days_left}d)"
-            
+
+            # Determinar estado OAuth
+            oauth_status = data.get('oauth_status', 'not_required')
+            if oauth_status == 'pending':
+                oauth_display = "⏳ Pendiente OAuth"
+            elif oauth_status == 'authorized':
+                oauth_display = "✅ OAuth OK"
+            elif oauth_status == 'configured':
+                oauth_display = "✅ Configurado"
+            else:
+                oauth_display = "➖ No requiere"
+
             tokens_list.append({
                 'Cliente': data['client_name'],
-                'Proyecto': data['project_id'],
-                'Dataset': data['dataset_id'],
+                'Proyecto': data.get('project_id', 'N/A'),
+                'Dataset': data.get('dataset_id', 'N/A'),
                 'Estado': status,
+                'OAuth': oauth_display,
                 'Creado': created.strftime('%d/%m/%Y'),
                 'Expira': expiration.strftime('%d/%m/%Y'),
                 'Accesos': data.get('access_count', 0),
@@ -291,10 +352,10 @@ with tab2:
             })
         
         df_tokens = pd.DataFrame(tokens_list)
-        
+
         # Mostrar tabla
         st.dataframe(
-            df_tokens[['Cliente', 'Proyecto', 'Dataset', 'Estado', 'Creado', 'Expira', 'Accesos']],
+            df_tokens[['Cliente', 'Proyecto', 'Dataset', 'Estado', 'OAuth', 'Creado', 'Expira', 'Accesos']],
             use_container_width=True,
             height=400
         )
@@ -320,46 +381,111 @@ with tab2:
             token_data = tokens[selected_token]
             
             # Mostrar detalles del token seleccionado
+            oauth_status = token_data.get('oauth_status', 'not_required')
+
             with st.expander("ℹ️ Detalles del Enlace", expanded=True):
                 col1, col2 = st.columns(2)
-                
+
                 with col1:
                     st.write("**Información General:**")
                     st.write(f"- Cliente: {token_data['client_name']}")
-                    st.write(f"- Proyecto: {token_data['project_id']}")
-                    st.write(f"- Dataset: {token_data['dataset_id']}")
+                    st.write(f"- Proyecto: {token_data.get('project_id', 'N/A')}")
+                    st.write(f"- Dataset: {token_data.get('dataset_id', 'N/A')}")
                     st.write(f"- Activo: {'✅ Sí' if token_data.get('active') else '❌ No'}")
-                
+
                 with col2:
                     st.write("**Estadísticas:**")
                     st.write(f"- Accesos: {token_data.get('access_count', 0)}")
-                    
+
                     last_access = token_data.get('last_access')
                     if last_access:
                         last_access_dt = datetime.fromisoformat(last_access)
                         st.write(f"- Último acceso: {last_access_dt.strftime('%d/%m/%Y %H:%M')}")
                     else:
                         st.write("- Último acceso: Nunca")
-                    
+
                     expiration = datetime.fromisoformat(token_data['expiration_date'])
                     days_left = (expiration - datetime.now()).days
                     st.write(f"- Días restantes: {days_left}")
-                
+
+                # Estado OAuth
+                st.write("**Estado OAuth:**")
+                if oauth_status == 'pending':
+                    st.warning("⏳ Pendiente de autorización del cliente")
+                elif oauth_status == 'authorized':
+                    st.success("✅ Cliente autorizó, falta configurar proyecto/dataset")
+                    oauth_authorized_at = token_data.get('oauth_authorized_at')
+                    if oauth_authorized_at:
+                        auth_dt = datetime.fromisoformat(oauth_authorized_at)
+                        st.write(f"- Autorizado el: {auth_dt.strftime('%d/%m/%Y %H:%M')}")
+                elif oauth_status == 'configured':
+                    st.success("✅ Completamente configurado")
+                    oauth_authorized_at = token_data.get('oauth_authorized_at')
+                    if oauth_authorized_at:
+                        auth_dt = datetime.fromisoformat(oauth_authorized_at)
+                        st.write(f"- Autorizado el: {auth_dt.strftime('%d/%m/%Y %H:%M')}")
+                else:
+                    st.info("➖ No requiere OAuth")
+
                 # Tabs permitidos
-                st.write("**Tabs Permitidos:**")
-                tab_names = AccessManager.get_tab_display_names()
-                tabs_display = ", ".join([tab_names.get(tab, tab) for tab in token_data['allowed_tabs']])
-                st.write(tabs_display)
-                
+                if token_data.get('allowed_tabs'):
+                    st.write("**Tabs Permitidos:**")
+                    tab_names = AccessManager.get_tab_display_names()
+                    tabs_display = ", ".join([tab_names.get(tab, tab) for tab in token_data['allowed_tabs']])
+                    st.write(tabs_display)
+
                 # Notas
                 if token_data.get('notes'):
                     st.write("**Notas:**")
                     st.info(token_data['notes'])
-                
-                # URL del enlace
-                st.write("**Enlace de Acceso:**")
-                access_url = AccessManager.get_access_url(selected_token)
-                st.code(access_url, language=None)
+
+                # URLs según el estado
+                if oauth_status == 'pending':
+                    st.write("**🔐 Enlace de OAuth (enviar al cliente):**")
+                    oauth_url = AccessManager.get_oauth_url(selected_token)
+                    st.code(oauth_url, language=None)
+                    st.caption("Envía este enlace al cliente para que autorice el acceso")
+                elif oauth_status == 'configured' or oauth_status == 'not_required':
+                    st.write("**🔗 Enlace de Acceso (para usar tú):**")
+                    access_url = AccessManager.get_access_url(selected_token)
+                    st.code(access_url, language=None)
+                    st.caption("Usa este enlace para acceder a los datos del cliente")
+
+            # Formulario de configuración para tokens autorizados
+            if oauth_status == 'authorized':
+                st.divider()
+                st.subheader("⚙️ Configurar Proyecto y Dataset")
+                st.info("✅ El cliente ya autorizó. Ahora configura el proyecto y dataset específico:")
+
+                with st.form(f"configure_oauth_{selected_token}"):
+                    config_col1, config_col2 = st.columns(2)
+
+                    with config_col1:
+                        config_project_id = st.text_input(
+                            "Project ID de BigQuery *",
+                            placeholder="Ej: mi-proyecto-analytics",
+                            help="ID del proyecto BigQuery al que tendrás acceso"
+                        )
+
+                    with config_col2:
+                        config_dataset_id = st.text_input(
+                            "Dataset ID *",
+                            placeholder="Ej: analytics_123456789",
+                            help="ID del dataset GA4 específico"
+                        )
+
+                    config_submitted = st.form_submit_button("✅ Guardar Configuración", use_container_width=True)
+
+                    if config_submitted:
+                        if not config_project_id or not config_dataset_id:
+                            st.error("❌ Por favor completa ambos campos")
+                        else:
+                            if AccessManager.configure_oauth_token(selected_token, config_project_id, config_dataset_id):
+                                st.success("✅ Configuración guardada exitosamente")
+                                st.info("🔗 Ahora puedes usar el enlace de acceso para acceder a los datos del cliente")
+                                st.rerun()
+                            else:
+                                st.error("❌ Error guardando la configuración")
             
             # Acciones
             st.subheader("🔧 Acciones Disponibles")

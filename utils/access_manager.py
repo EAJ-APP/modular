@@ -37,52 +37,63 @@ class AccessManager:
     @staticmethod
     def create_client_access(
         client_name: str,
-        project_id: str,
-        dataset_id: str,
-        allowed_tabs: List[str],
+        project_id: str = None,
+        dataset_id: str = None,
+        allowed_tabs: List[str] = None,
         expiration_days: int = 30,
-        notes: str = ""
+        notes: str = "",
+        require_oauth: bool = False
     ) -> Dict:
         """
         Crea un nuevo acceso para cliente
-        
+
         Args:
             client_name: Nombre del cliente
-            project_id: ID del proyecto BigQuery
-            dataset_id: ID del dataset BigQuery
-            allowed_tabs: Lista de tabs permitidos
+            project_id: ID del proyecto BigQuery (opcional si require_oauth=True)
+            dataset_id: ID del dataset BigQuery (opcional si require_oauth=True)
+            allowed_tabs: Lista de tabs permitidos (opcional si require_oauth=True)
             expiration_days: Días hasta expiración
             notes: Notas adicionales
-            
+            require_oauth: Si True, crea token pendiente de OAuth del cliente
+
         Returns:
             Dict con información del acceso creado
         """
         AccessManager.initialize_tokens()
-        
+
         # Generar token único
         token = AccessManager.generate_token()
-        
+
         # Calcular fecha de expiración
         expiration_date = datetime.now() + timedelta(days=expiration_days)
-        
+
+        # Determinar estado inicial
+        if require_oauth:
+            oauth_status = "pending"  # Esperando OAuth del cliente
+        else:
+            oauth_status = "not_required"  # No requiere OAuth
+
         # Crear registro de acceso
         access_data = {
             'token': token,
             'client_name': client_name,
             'project_id': project_id,
             'dataset_id': dataset_id,
-            'allowed_tabs': allowed_tabs,
+            'allowed_tabs': allowed_tabs or [],
             'created_at': datetime.now().isoformat(),
             'expiration_date': expiration_date.isoformat(),
             'notes': notes,
             'active': True,
             'access_count': 0,
-            'last_access': None
+            'last_access': None,
+            'oauth_status': oauth_status,  # pending | authorized | configured | not_required
+            'oauth_credentials': None,  # Credenciales OAuth del cliente
+            'oauth_authorized_at': None  # Fecha de autorización OAuth
         }
-        
+
         # Guardar en session_state
         st.session_state[AccessManager.TOKENS_KEY][token] = access_data
-        
+
         return access_data
     
     @staticmethod
@@ -311,10 +322,10 @@ class AccessManager:
     def set_admin_session(password: str) -> bool:
         """
         Establece una sesión de administrador
-        
+
         Args:
             password: Contraseña de admin
-            
+
         Returns:
             True si la contraseña es correcta
         """
@@ -322,9 +333,98 @@ class AccessManager:
             admin_password = st.secrets.get("admin_password", "admin123")
         except:
             admin_password = "admin123"
-        
+
         if password == admin_password:
             st.session_state['is_admin'] = True
             return True
-        
+
         return False
+
+    @staticmethod
+    def save_oauth_credentials(token: str, credentials_dict: Dict) -> bool:
+        """
+        Guarda las credenciales OAuth del cliente en el token
+
+        Args:
+            token: Token del cliente
+            credentials_dict: Diccionario con credenciales OAuth
+
+        Returns:
+            True si se guardó exitosamente
+        """
+        AccessManager.initialize_tokens()
+
+        tokens = st.session_state[AccessManager.TOKENS_KEY]
+
+        if token in tokens:
+            tokens[token]['oauth_credentials'] = credentials_dict
+            tokens[token]['oauth_status'] = 'authorized'
+            tokens[token]['oauth_authorized_at'] = datetime.now().isoformat()
+            return True
+
+        return False
+
+    @staticmethod
+    def configure_oauth_token(token: str, project_id: str, dataset_id: str) -> bool:
+        """
+        Configura project/dataset para un token que ya tiene OAuth autorizado
+
+        Args:
+            token: Token del cliente
+            project_id: ID del proyecto BigQuery
+            dataset_id: ID del dataset BigQuery
+
+        Returns:
+            True si se configuró exitosamente
+        """
+        AccessManager.initialize_tokens()
+
+        tokens = st.session_state[AccessManager.TOKENS_KEY]
+
+        if token in tokens and tokens[token]['oauth_status'] == 'authorized':
+            tokens[token]['project_id'] = project_id
+            tokens[token]['dataset_id'] = dataset_id
+            tokens[token]['oauth_status'] = 'configured'
+            return True
+
+        return False
+
+    @staticmethod
+    def get_oauth_url(token: str, base_url: str = None) -> str:
+        """
+        Genera la URL de OAuth para que el cliente autorice
+
+        Args:
+            token: Token de acceso
+            base_url: URL base de la aplicación
+
+        Returns:
+            URL completa con el token para OAuth
+        """
+        if base_url is None:
+            try:
+                base_url = st.secrets.get("app_url", "https://your-app.streamlit.app")
+            except:
+                base_url = "https://your-app.streamlit.app"
+
+        return f"{base_url}/client_oauth?token={token}"
+
+    @staticmethod
+    def get_oauth_credentials(token: str) -> Optional[Dict]:
+        """
+        Obtiene las credenciales OAuth guardadas para un token
+
+        Args:
+            token: Token del cliente
+
+        Returns:
+            Dict con credenciales o None si no existen
+        """
+        AccessManager.initialize_tokens()
+
+        tokens = st.session_state[AccessManager.TOKENS_KEY]
+
+        if token in tokens:
+            return tokens[token].get('oauth_credentials')
+
+        return None
