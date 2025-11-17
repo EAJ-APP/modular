@@ -428,3 +428,32 @@ class AccessManager:
             return tokens[token].get('oauth_credentials')
 
         return None
+
+    @staticmethod
+    def configure_oauth_token_complete(token: str, credentials_dict: Dict, project_id: str, dataset_id: str) -> bool:
+        """
+        Guarda las credenciales OAuth y configura project/dataset en un solo paso
+        Cambia el estado directamente a 'configured'
+
+        Args:
+            token: Token del cliente
+            credentials_dict: Diccionario con credenciales OAuth
+            project_id: ID del proyecto BigQuery
+            dataset_id: ID del dataset BigQuery
+
+        Returns:
+            True si se configuró exitosamente
+        """
+        AccessManager.initialize_tokens()
+
+        tokens = st.session_state[AccessManager.TOKENS_KEY]
+
+        if token in tokens and tokens[token]['oauth_status'] == 'pending':
+            tokens[token]['oauth_credentials'] = credentials_dict
+            tokens[token]['project_id'] = project_id
+            tokens[token]['dataset_id'] = dataset_id
+            tokens[token]['oauth_status'] = 'configured'
+            tokens[token]['oauth_authorized_at'] = datetime.now().isoformat()
+            return True
+
+        return False

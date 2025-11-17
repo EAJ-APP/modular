@@ -1,6 +1,7 @@
 """
 Página de Autorización OAuth para Clientes
 Permite a los clientes autorizar el acceso a sus datos de BigQuery mediante OAuth
+y seleccionar el proyecto/dataset
 """
 
 import streamlit as st
@@ -8,6 +9,7 @@ from auth import OAuthHandler, AuthConfig
 from utils.access_manager import AccessManager
 import requests
 from google.oauth2.credentials import Credentials
+from google.cloud import bigquery
 from datetime import datetime, timedelta
 
 # Configuración de página
@@ -41,6 +43,7 @@ st.markdown("""
 def handle_oauth_callback(token: str):
     """
     Maneja el callback de OAuth después del login del cliente
+    Retorna las credenciales si fue exitoso
     """
     query_params = st.query_params
 
@@ -72,7 +75,7 @@ def handle_oauth_callback(token: str):
                 if token_response.status_code != 200:
                     st.error(f"❌ Error obteniendo token: {token_response.status_code}")
                     st.code(token_response.text)
-                    return False
+                    return None
 
                 token_data = token_response.json()
 
@@ -95,49 +98,25 @@ def handle_oauth_callback(token: str):
                 status_text.text("✅ Credenciales creadas")
                 progress_bar.progress(75)
 
-                # Convertir credenciales a diccionario
-                creds_dict = OAuthHandler.credentials_to_dict(credentials)
+                # Obtener info del usuario
+                user_info = get_user_info_from_token(credentials.token)
 
-                # Guardar credenciales en el token
-                if AccessManager.save_oauth_credentials(token, creds_dict):
-                    status_text.text("✅ Credenciales guardadas")
-                    progress_bar.progress(90)
+                status_text.text(f"✅ Usuario identificado: {user_info.get('name', 'Usuario')}")
+                progress_bar.progress(100)
 
-                    # Obtener info del usuario
-                    user_info = get_user_info_from_token(credentials.token)
+                # Limpiar query params
+                st.query_params.clear()
 
-                    progress_bar.progress(100)
+                # Guardar en session_state para el siguiente paso
+                st.session_state['oauth_credentials'] = credentials
+                st.session_state['oauth_user_info'] = user_info
+                st.session_state['oauth_token'] = token
+                st.session_state['oauth_completed'] = True
 
-                    # Limpiar query params
-                    st.query_params.clear()
+                st.success("✅ ¡Autorización completada!")
+                st.balloons()
 
-                    # Mostrar mensaje de éxito
-                    st.success("✅ ¡Autorización completada exitosamente!")
-                    st.balloons()
-
-                    st.markdown(f"""
-                    ### 🎉 ¡Gracias, {user_info.get('name', 'Usuario')}!
-
-                    Tu autorización ha sido registrada correctamente.
-
-                    #### ¿Qué sigue?
-
-                    1. ✅ Has autorizado el acceso a tu cuenta de BigQuery
-                    2. 📧 El administrador será notificado
-                    3. ⚙️ El administrador configurará el proyecto y dataset específico
-                    4. 🚀 Una vez configurado, el administrador podrá acceder a tus datos
-
-                    **Puedes cerrar esta ventana ahora.**
-
-                    ---
-
-                    *Si tienes alguna pregunta, contacta al administrador que te envió este enlace.*
-                    """)
-
-                    return True
-                else:
-                    st.error("❌ Error guardando las credenciales")
-                    return False
+                return credentials
 
             except Exception as e:
                 st.error(f"❌ Error en callback OAuth: {str(e)}")
@@ -150,9 +129,9 @@ def handle_oauth_callback(token: str):
                     st.query_params.clear()
                     st.rerun()
 
-                return False
+                return None
 
-    return False
+    return None
 
 def get_user_info_from_token(access_token: str) -> dict:
     """Obtiene información del usuario desde el token de acceso"""
@@ -170,6 +149,27 @@ def get_user_info_from_token(access_token: str) -> dict:
     except Exception as e:
         st.warning(f"⚠️ No se pudo obtener info del usuario: {e}")
         return {'name': 'Usuario', 'email': 'unknown@example.com'}
+
+def list_projects(credentials):
+    """Lista los proyectos de BigQuery del cliente"""
+    try:
+        # Crear cliente temporal con las credenciales del cliente
+        client = bigquery.Client(credentials=credentials, project='dummy-project-for-listing')
+        projects = list(client.list_projects())
+        return [(p.project_id, p.friendly_name or p.project_id) for p in projects]
+    except Exception as e:
+        st.error(f"❌ Error listando proyectos: {str(e)}")
+        return []
+
+def list_datasets(credentials, project_id):
+    """Lista los datasets de un proyecto"""
+    try:
+        client = bigquery.Client(credentials=credentials, project=project_id)
+        datasets = list(client.list_datasets())
+        return [d.dataset_id for d in datasets]
+    except Exception as e:
+        st.error(f"❌ Error listando datasets: {str(e)}")
+        return []
 
 # ==========================================
 # FLUJO PRINCIPAL
@@ -209,21 +209,19 @@ token_data = tokens[token]
 # Verificar estado del token
 oauth_status = token_data.get('oauth_status', 'not_required')
 
-# IMPORTANTE: Manejar callback ANTES de mostrar opciones
-if handle_oauth_callback(token):
-    st.stop()  # Si hay callback exitoso, no mostrar el resto
-
-# Si ya está autorizado, mostrar mensaje
-if oauth_status == 'authorized' or oauth_status == 'configured':
-    st.success("✅ Ya has autorizado el acceso anteriormente")
+# Si ya está configurado, mostrar mensaje
+if oauth_status == 'configured':
+    st.success("✅ Ya has configurado el acceso anteriormente")
     st.markdown(f"""
-    ### ✅ Autorización Completada
+    ### ✅ Configuración Completada
 
     **Cliente:** {token_data['client_name']}
+    **Proyecto:** {token_data.get('project_id', 'N/A')}
+    **Dataset:** {token_data.get('dataset_id', 'N/A')}
 
-    Este enlace ya ha sido usado para autorizar el acceso.
+    Este enlace ya ha sido configurado.
 
-    Si necesitas realizar cambios o revocar el acceso, contacta al administrador.
+    El administrador ya puede acceder a tus datos usando su enlace.
 
     **Puedes cerrar esta ventana.**
     """)
@@ -239,6 +237,137 @@ if oauth_status == 'not_required':
 
     Por favor, contacta al administrador.
     """)
+    st.stop()
+
+# IMPORTANTE: Manejar callback PRIMERO
+credentials = handle_oauth_callback(token)
+
+# Si acabamos de completar OAuth o ya lo teníamos en session_state
+if credentials or st.session_state.get('oauth_completed', False):
+
+    # Recuperar credenciales de session_state si no las tenemos
+    if not credentials:
+        credentials = st.session_state.get('oauth_credentials')
+
+    user_info = st.session_state.get('oauth_user_info', {'name': 'Usuario'})
+
+    # Header
+    st.title("🔐 Configuración de Acceso")
+    st.markdown(f"""
+    ### ¡Gracias, **{user_info.get('name', 'Usuario')}**!
+
+    Tu autorización ha sido completada. Ahora selecciona el proyecto y dataset de BigQuery al que quieres dar acceso.
+    """)
+
+    st.divider()
+
+    # Obtener proyectos
+    with st.spinner("📊 Cargando tus proyectos de BigQuery..."):
+        projects = list_projects(credentials)
+
+    if not projects:
+        st.error("❌ No se pudieron cargar tus proyectos de BigQuery")
+        st.warning("Verifica que tu cuenta tenga acceso a BigQuery y que los permisos OAuth sean correctos.")
+        st.stop()
+
+    # Selector de proyecto
+    st.subheader("1️⃣ Selecciona tu Proyecto")
+
+    project_options = {f"{name} ({pid})": pid for pid, name in projects}
+
+    selected_project_display = st.selectbox(
+        "Proyecto de BigQuery:",
+        options=list(project_options.keys()),
+        help="Selecciona el proyecto que contiene los datos de Analytics"
+    )
+
+    selected_project = project_options[selected_project_display]
+
+    st.divider()
+
+    # Selector de dataset
+    st.subheader("2️⃣ Selecciona tu Dataset")
+
+    with st.spinner(f"📂 Cargando datasets del proyecto {selected_project}..."):
+        datasets = list_datasets(credentials, selected_project)
+
+    if not datasets:
+        st.error(f"❌ No se encontraron datasets en el proyecto {selected_project}")
+        st.info("Verifica que el proyecto seleccionado tenga datasets de BigQuery.")
+        st.stop()
+
+    selected_dataset = st.selectbox(
+        "Dataset de BigQuery:",
+        options=datasets,
+        help="Selecciona el dataset que contiene los datos de Google Analytics 4"
+    )
+
+    st.divider()
+
+    # Resumen de la configuración
+    st.subheader("📋 Resumen de Configuración")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.info(f"**Proyecto:** {selected_project}")
+
+    with col2:
+        st.info(f"**Dataset:** {selected_dataset}")
+
+    st.warning("""
+    ⚠️ **Importante:** Esta configuración es permanente.
+    Una vez confirmada, el administrador podrá acceder a este proyecto y dataset.
+    Si necesitas cambiar la configuración, deberás contactar al administrador.
+    """)
+
+    # Botón de confirmación
+    if st.button("✅ Confirmar y Finalizar", type="primary", use_container_width=True):
+        with st.spinner("💾 Guardando configuración..."):
+            try:
+                # Convertir credenciales a diccionario
+                creds_dict = OAuthHandler.credentials_to_dict(credentials)
+
+                # Guardar todo de una vez usando el nuevo método
+                if AccessManager.configure_oauth_token_complete(token, creds_dict, selected_project, selected_dataset):
+                    st.success("✅ ¡Configuración guardada exitosamente!")
+                    st.balloons()
+
+                    # Limpiar session_state
+                    if 'oauth_credentials' in st.session_state:
+                        del st.session_state['oauth_credentials']
+                    if 'oauth_user_info' in st.session_state:
+                        del st.session_state['oauth_user_info']
+                    if 'oauth_completed' in st.session_state:
+                        del st.session_state['oauth_completed']
+
+                    st.markdown(f"""
+                    ### 🎉 ¡Todo Listo!
+
+                    **Tu configuración ha sido guardada:**
+                    - ✅ Autorización OAuth completada
+                    - ✅ Proyecto: {selected_project}
+                    - ✅ Dataset: {selected_dataset}
+
+                    El administrador ya puede acceder a tus datos de BigQuery.
+
+                    **Puedes cerrar esta ventana ahora.**
+
+                    ---
+
+                    *Si tienes alguna pregunta, contacta al administrador que te envió este enlace.*
+                    """)
+
+                    st.stop()
+                else:
+                    st.error("❌ Error guardando la configuración. Por favor, contacta al administrador.")
+
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+                with st.expander("🔍 Ver detalles técnicos"):
+                    import traceback
+                    st.code(traceback.format_exc())
+
     st.stop()
 
 # Si el token está pendiente de OAuth, mostrar página de autorización
@@ -262,23 +391,21 @@ if oauth_status == 'pending':
     Al hacer clic en el botón de abajo, se te pedirá:
 
     1. **Iniciar sesión con tu cuenta de Google** (si no lo has hecho ya)
-    2. **Autorizar el acceso a BigQuery** para que el administrador pueda:
-       - Ver tus proyectos de BigQuery
-       - Ejecutar consultas en tu nombre
-       - Acceder a los datos de Analytics que especifiques
+    2. **Autorizar el acceso a BigQuery** para que el administrador pueda ejecutar consultas en tu nombre
+    3. **Seleccionar tu proyecto y dataset** de BigQuery
 
     ## 🔒 Seguridad y Privacidad
 
     - ✅ Solo el administrador que creó este enlace tendrá acceso
-    - ✅ El acceso es específico al proyecto/dataset que elijas
-    - ✅ Puedes revocar el acceso en cualquier momento
+    - ✅ El acceso es específico al proyecto/dataset que selecciones
+    - ✅ Puedes revocar el acceso en cualquier momento contactando al administrador
     - ✅ No compartimos tu información con terceros
 
     ## 📝 ¿Qué sigue después de autorizar?
 
-    1. Autorizas el acceso (este paso)
-    2. El administrador selecciona el proyecto y dataset específico
-    3. El administrador puede empezar a trabajar con tus datos
+    1. Autorizas el acceso con Google (siguiente paso)
+    2. Seleccionas el proyecto y dataset de BigQuery
+    3. ¡Listo! El administrador podrá acceder a tus datos
 
     ---
     """)

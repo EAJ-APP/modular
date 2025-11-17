@@ -145,7 +145,7 @@ with tab1:
         require_oauth = st.checkbox(
             "🔐 Requiere OAuth del Cliente",
             value=False,
-            help="Si activas esto, el cliente deberá autorizar con su cuenta de Google antes de que puedas configurar el acceso"
+            help="Si activas esto, el cliente deberá autorizar con su cuenta de Google y seleccionar su proyecto/dataset"
         )
 
         if require_oauth:
@@ -154,7 +154,7 @@ with tab1:
             1. Creas el token con el nombre del cliente
             2. Envías el enlace de OAuth al cliente
             3. El cliente autoriza con su cuenta de Google
-            4. Tú configuras el proyecto/dataset después de la autorización
+            4. El cliente selecciona su proyecto/dataset
             5. Usas el enlace final para acceder a sus datos
             """)
 
@@ -182,7 +182,7 @@ with tab1:
             else:
                 project_id = None
                 dataset_id = None
-                st.info("ℹ️ Configurarás el proyecto/dataset después de que el cliente autorice")
+                st.info("ℹ️ El cliente configurará el proyecto/dataset después de autorizar")
 
         with col2:
             expiration_days = st.number_input(
@@ -255,9 +255,10 @@ with tab1:
                         st.markdown("""
                         **Próximos pasos:**
                         1. 📧 Envía el enlace de arriba al cliente
-                        2. ⏳ Espera a que el cliente autorice con su cuenta de Google
-                        3. ✅ Cuando esté autorizado, podrás configurar el proyecto/dataset en la pestaña "Enlaces Existentes"
-                        4. 🚀 Usa el enlace final para acceder a los datos del cliente
+                        2. ⏳ El cliente autorizará con su cuenta de Google
+                        3. 🔧 El cliente seleccionará su proyecto/dataset de BigQuery
+                        4. ✅ Una vez completado, verás el estado "✅ Listo" en la pestaña "Enlaces Existentes"
+                        5. 🚀 Usa el enlace final para acceder a los datos del cliente
                         """)
                     else:
                         # Mostrar el enlace generado (flujo tradicional)
@@ -331,13 +332,13 @@ with tab2:
             # Determinar estado OAuth
             oauth_status = data.get('oauth_status', 'not_required')
             if oauth_status == 'pending':
-                oauth_display = "⏳ Pendiente OAuth"
+                oauth_display = "⏳ Pendiente"
             elif oauth_status == 'authorized':
-                oauth_display = "✅ OAuth OK"
+                oauth_display = "⏳ Configurando..."  # Estado temporal
             elif oauth_status == 'configured':
-                oauth_display = "✅ Configurado"
+                oauth_display = "✅ Listo"
             else:
-                oauth_display = "➖ No requiere"
+                oauth_display = "➖ Sin OAuth"
 
             tokens_list.append({
                 'Cliente': data['client_name'],
@@ -411,19 +412,19 @@ with tab2:
                 # Estado OAuth
                 st.write("**Estado OAuth:**")
                 if oauth_status == 'pending':
-                    st.warning("⏳ Pendiente de autorización del cliente")
+                    st.warning("⏳ Esperando que el cliente autorice y configure")
                 elif oauth_status == 'authorized':
-                    st.success("✅ Cliente autorizó, falta configurar proyecto/dataset")
+                    st.warning("⏳ Cliente está configurando proyecto/dataset")
                     oauth_authorized_at = token_data.get('oauth_authorized_at')
                     if oauth_authorized_at:
                         auth_dt = datetime.fromisoformat(oauth_authorized_at)
                         st.write(f"- Autorizado el: {auth_dt.strftime('%d/%m/%Y %H:%M')}")
                 elif oauth_status == 'configured':
-                    st.success("✅ Completamente configurado")
+                    st.success("✅ Configurado y listo para usar")
                     oauth_authorized_at = token_data.get('oauth_authorized_at')
                     if oauth_authorized_at:
                         auth_dt = datetime.fromisoformat(oauth_authorized_at)
-                        st.write(f"- Autorizado el: {auth_dt.strftime('%d/%m/%Y %H:%M')}")
+                        st.write(f"- Configurado el: {auth_dt.strftime('%d/%m/%Y %H:%M')}")
                 else:
                     st.info("➖ No requiere OAuth")
 
@@ -451,42 +452,6 @@ with tab2:
                     st.code(access_url, language=None)
                     st.caption("Usa este enlace para acceder a los datos del cliente")
 
-            # Formulario de configuración para tokens autorizados
-            if oauth_status == 'authorized':
-                st.divider()
-                st.subheader("⚙️ Configurar Proyecto y Dataset")
-                st.info("✅ El cliente ya autorizó. Ahora configura el proyecto y dataset específico:")
-
-                with st.form(f"configure_oauth_{selected_token}"):
-                    config_col1, config_col2 = st.columns(2)
-
-                    with config_col1:
-                        config_project_id = st.text_input(
-                            "Project ID de BigQuery *",
-                            placeholder="Ej: mi-proyecto-analytics",
-                            help="ID del proyecto BigQuery al que tendrás acceso"
-                        )
-
-                    with config_col2:
-                        config_dataset_id = st.text_input(
-                            "Dataset ID *",
-                            placeholder="Ej: analytics_123456789",
-                            help="ID del dataset GA4 específico"
-                        )
-
-                    config_submitted = st.form_submit_button("✅ Guardar Configuración", use_container_width=True)
-
-                    if config_submitted:
-                        if not config_project_id or not config_dataset_id:
-                            st.error("❌ Por favor completa ambos campos")
-                        else:
-                            if AccessManager.configure_oauth_token(selected_token, config_project_id, config_dataset_id):
-                                st.success("✅ Configuración guardada exitosamente")
-                                st.info("🔗 Ahora puedes usar el enlace de acceso para acceder a los datos del cliente")
-                                st.rerun()
-                            else:
-                                st.error("❌ Error guardando la configuración")
-            
             # Acciones
             st.subheader("🔧 Acciones Disponibles")
             
