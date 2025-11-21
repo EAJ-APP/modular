@@ -178,6 +178,20 @@ def get_user_info_from_token(access_token: str) -> dict:
 # Obtener token de los parámetros de query
 token = st.query_params.get('token')
 
+# DEBUG INFO
+with st.expander("🔍 Debug Info (Admin)", expanded=False):
+    st.write("**Query Params:**")
+    st.json(dict(st.query_params))
+    st.write(f"**Token recibido:** `{token}`")
+
+    AccessManager.initialize_tokens()
+    all_tokens = AccessManager.get_all_tokens()
+
+    st.write(f"**Total tokens en sistema:** {len(all_tokens)}")
+    st.write("**Tokens disponibles:**")
+    for t, data in all_tokens.items():
+        st.write(f"- `{t[:16]}...` - Cliente: {data.get('client_name')} - OAuth Status: {data.get('oauth_status')}")
+
 if not token:
     st.error("❌ Token no proporcionado")
     st.markdown("""
@@ -202,6 +216,17 @@ if token not in tokens:
 
     Por favor, contacta al administrador para obtener un nuevo enlace.
     """)
+
+    # DEBUG adicional
+    with st.expander("🔧 Info técnica para debug"):
+        st.write(f"Token buscado: `{token}`")
+        st.write(f"Longitud del token: {len(token) if token else 0}")
+        st.write(f"Tokens en memoria: {len(tokens)}")
+        if tokens:
+            st.write("Primeros 16 caracteres de tokens disponibles:")
+            for t in tokens.keys():
+                st.write(f"- `{t[:16]}...`")
+
     st.stop()
 
 token_data = tokens[token]

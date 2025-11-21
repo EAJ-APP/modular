@@ -144,7 +144,7 @@ with tab1:
         # Selector de tipo de enlace
         require_oauth = st.checkbox(
             "🔐 Requiere OAuth del Cliente",
-            value=False,
+            value=True,
             help="Si activas esto, el cliente deberá autorizar con su cuenta de Google antes de que puedas configurar el acceso"
         )
 
