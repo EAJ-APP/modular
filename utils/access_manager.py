@@ -9,6 +9,8 @@ import hashlib
 import secrets
 import json
 from typing import Dict, List, Optional
+from google.oauth2.credentials import Credentials
+from google.cloud import bigquery
 
 class AccessManager:
     """Gestiona los accesos de clientes mediante tokens y restricciones"""
@@ -428,3 +430,116 @@ class AccessManager:
             return tokens[token].get('oauth_credentials')
 
         return None
+
+    @staticmethod
+    def get_bigquery_client_from_token(token: str) -> Optional[bigquery.Client]:
+        """
+        Crea un cliente de BigQuery usando las credenciales OAuth de un token
+
+        Args:
+            token: Token del cliente
+
+        Returns:
+            Cliente de BigQuery o None si no hay credenciales
+        """
+        creds_dict = AccessManager.get_oauth_credentials(token)
+
+        if not creds_dict:
+            return None
+
+        try:
+            # Reconstruir credenciales desde el diccionario
+            credentials = Credentials(
+                token=creds_dict.get('token'),
+                refresh_token=creds_dict.get('refresh_token'),
+                token_uri=creds_dict.get('token_uri'),
+                client_id=creds_dict.get('client_id'),
+                client_secret=creds_dict.get('client_secret'),
+                scopes=creds_dict.get('scopes', [])
+            )
+
+            # Crear cliente de BigQuery
+            return bigquery.Client(credentials=credentials)
+
+        except Exception as e:
+            st.error(f"Error creando cliente BigQuery: {e}")
+            return None
+
+    @staticmethod
+    def is_ga4_dataset(client: bigquery.Client, project_id: str, dataset_id: str) -> bool:
+        """
+        Verifica si un dataset es de GA4 (tiene tablas events_*)
+
+        Args:
+            client: Cliente de BigQuery
+            project_id: ID del proyecto
+            dataset_id: ID del dataset
+
+        Returns:
+            True si es dataset de GA4
+        """
+        try:
+            # Listar tablas del dataset
+            dataset_ref = f"{project_id}.{dataset_id}"
+            tables = list(client.list_tables(dataset_ref, max_results=10))
+
+            # Verificar si hay tablas que empiecen con "events_"
+            for table in tables:
+                if table.table_id.startswith('events_'):
+                    return True
+
+            return False
+
+        except Exception:
+            return False
+
+    @staticmethod
+    def get_ga4_projects_and_datasets(token: str) -> Dict[str, List[str]]:
+        """
+        Obtiene proyectos y datasets de GA4 usando las credenciales OAuth del token
+
+        Args:
+            token: Token del cliente
+
+        Returns:
+            Dict con {project_id: [lista de datasets GA4]}
+        """
+        client = AccessManager.get_bigquery_client_from_token(token)
+
+        if not client:
+            return {}
+
+        ga4_projects = {}
+
+        try:
+            # Listar todos los proyectos
+            projects = list(client.list_projects())
+
+            for project in projects:
+                project_id = project.project_id
+
+                try:
+                    # Listar datasets del proyecto
+                    datasets = list(client.list_datasets(project_id))
+
+                    # Filtrar solo datasets de GA4
+                    ga4_datasets = []
+                    for dataset in datasets:
+                        dataset_id = dataset.dataset_id
+
+                        if AccessManager.is_ga4_dataset(client, project_id, dataset_id):
+                            ga4_datasets.append(dataset_id)
+
+                    # Solo añadir el proyecto si tiene datasets GA4
+                    if ga4_datasets:
+                        ga4_projects[project_id] = ga4_datasets
+
+                except Exception:
+                    # Si no se pueden listar datasets del proyecto, continuar
+                    continue
+
+            return ga4_projects
+
+        except Exception as e:
+            st.error(f"Error listando proyectos: {e}")
+            return {}

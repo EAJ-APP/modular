@@ -455,37 +455,100 @@ with tab2:
             if oauth_status == 'authorized':
                 st.divider()
                 st.subheader("⚙️ Configurar Proyecto y Dataset")
-                st.info("✅ El cliente ya autorizó. Ahora configura el proyecto y dataset específico:")
+                st.info("✅ El cliente ya autorizó. Ahora selecciona el proyecto y dataset de GA4:")
 
-                with st.form(f"configure_oauth_{selected_token}"):
-                    config_col1, config_col2 = st.columns(2)
+                # Obtener proyectos y datasets disponibles
+                with st.spinner("🔍 Cargando proyectos y datasets del cliente..."):
+                    ga4_projects = AccessManager.get_ga4_projects_and_datasets(selected_token)
 
-                    with config_col1:
-                        config_project_id = st.text_input(
-                            "Project ID de BigQuery *",
-                            placeholder="Ej: mi-proyecto-analytics",
-                            help="ID del proyecto BigQuery al que tendrás acceso"
-                        )
+                if not ga4_projects:
+                    st.warning("⚠️ No se encontraron proyectos con datasets de GA4")
+                    st.markdown("""
+                    **Posibles causas:**
+                    - El cliente no tiene proyectos con GA4 en su cuenta
+                    - El cliente no otorgó los permisos necesarios
+                    - Los datasets no siguen el patrón de GA4 (tablas `events_*`)
 
-                    with config_col2:
-                        config_dataset_id = st.text_input(
-                            "Dataset ID *",
-                            placeholder="Ej: analytics_123456789",
-                            help="ID del dataset GA4 específico"
-                        )
+                    **Solución:** Contacta al cliente para verificar que tiene acceso a proyectos con GA4.
+                    """)
 
-                    config_submitted = st.form_submit_button("✅ Guardar Configuración", use_container_width=True)
+                    # Opción manual como fallback
+                    with st.expander("🔧 Configurar manualmente (modo avanzado)"):
+                        with st.form(f"configure_oauth_manual_{selected_token}"):
+                            manual_col1, manual_col2 = st.columns(2)
 
-                    if config_submitted:
-                        if not config_project_id or not config_dataset_id:
-                            st.error("❌ Por favor completa ambos campos")
-                        else:
-                            if AccessManager.configure_oauth_token(selected_token, config_project_id, config_dataset_id):
-                                st.success("✅ Configuración guardada exitosamente")
-                                st.info("🔗 Ahora puedes usar el enlace de acceso para acceder a los datos del cliente")
-                                st.rerun()
+                            with manual_col1:
+                                manual_project_id = st.text_input(
+                                    "Project ID de BigQuery *",
+                                    placeholder="Ej: mi-proyecto-analytics"
+                                )
+
+                            with manual_col2:
+                                manual_dataset_id = st.text_input(
+                                    "Dataset ID *",
+                                    placeholder="Ej: analytics_123456789"
+                                )
+
+                            manual_submitted = st.form_submit_button("✅ Guardar Configuración Manual", use_container_width=True)
+
+                            if manual_submitted:
+                                if not manual_project_id or not manual_dataset_id:
+                                    st.error("❌ Por favor completa ambos campos")
+                                else:
+                                    if AccessManager.configure_oauth_token(selected_token, manual_project_id, manual_dataset_id):
+                                        st.success("✅ Configuración guardada exitosamente")
+                                        st.rerun()
+                                    else:
+                                        st.error("❌ Error guardando la configuración")
+                else:
+                    st.success(f"✅ Se encontraron {len(ga4_projects)} proyecto(s) con datasets de GA4")
+
+                    with st.form(f"configure_oauth_{selected_token}"):
+                        config_col1, config_col2 = st.columns(2)
+
+                        with config_col1:
+                            # Crear opciones con contador de datasets
+                            project_options = [
+                                f"{project_id} ({len(datasets)} dataset{'s' if len(datasets) > 1 else ''})"
+                                for project_id, datasets in ga4_projects.items()
+                            ]
+
+                            # Mapeo para obtener el project_id original
+                            project_mapping = {
+                                f"{project_id} ({len(datasets)} dataset{'s' if len(datasets) > 1 else ''})": project_id
+                                for project_id, datasets in ga4_projects.items()
+                            }
+
+                            selected_project_display = st.selectbox(
+                                "Proyecto GCP con GA4 *",
+                                options=project_options,
+                                help="Selecciona el proyecto del cliente"
+                            )
+
+                            config_project_id = project_mapping[selected_project_display]
+
+                        with config_col2:
+                            # Obtener datasets del proyecto seleccionado
+                            available_datasets = ga4_projects[config_project_id]
+
+                            config_dataset_id = st.selectbox(
+                                "Dataset GA4 *",
+                                options=available_datasets,
+                                help="Selecciona el dataset de GA4"
+                            )
+
+                        config_submitted = st.form_submit_button("✅ Guardar Configuración", use_container_width=True)
+
+                        if config_submitted:
+                            if not config_project_id or not config_dataset_id:
+                                st.error("❌ Por favor completa ambos campos")
                             else:
-                                st.error("❌ Error guardando la configuración")
+                                if AccessManager.configure_oauth_token(selected_token, config_project_id, config_dataset_id):
+                                    st.success("✅ Configuración guardada exitosamente")
+                                    st.info("🔗 Ahora puedes usar el enlace de acceso para acceder a los datos del cliente")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Error guardando la configuración")
             
             # Acciones
             st.subheader("🔧 Acciones Disponibles")
