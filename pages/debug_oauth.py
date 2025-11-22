@@ -112,7 +112,7 @@ with tab1:
 [oauth]
 client_id = "TU_CLIENT_ID.apps.googleusercontent.com"
 client_secret = "GOCSPX-xxxxxxxxxxxxx"
-redirect_uri = "https://tu-app.streamlit.app"
+redirect_uri = "https://modular-t4qqlkh4xr4wdblf4eyjjo.streamlit.app"
                 """, language="toml")
         except Exception as e:
             st.error(f"❌ Error: {e}")
