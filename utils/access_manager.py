@@ -265,8 +265,8 @@ class AccessManager:
             except:
                 base_url = "https://your-app.streamlit.app"
         
-        # Construir URL con query parameter
-        return f"{base_url}/client_access?token={token}"
+        # Construir URL con query parameter (Vista Admin)
+        return f"{base_url}/admin_client_view?token={token}"
     
     @staticmethod
     def get_token_stats() -> Dict:

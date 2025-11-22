@@ -245,19 +245,46 @@ with tab1:
                         # Mostrar enlace de OAuth
                         oauth_url = AccessManager.get_oauth_url(access_data['token'])
 
-                        st.markdown("### 🔐 Enlace de Autorización OAuth:")
-                        st.markdown("**Envía este enlace al cliente para que autorice el acceso:**")
+                        st.success("✅ Enlace OAuth creado correctamente")
+
+                        st.markdown("---")
+                        st.markdown("### 📧 PASO 1: Enlace para el CLIENTE (Autorización)")
+
+                        st.warning("""
+                        ⚠️ **Este enlace es SOLO para el cliente**
+
+                        El cliente autorizará el acceso a sus datos. NO tendrá acceso a la herramienta.
+                        """)
+
+                        st.markdown("**Copia y envía este enlace al cliente:**")
                         st.code(oauth_url, language=None)
 
                         st.info(f"**Cliente:** {client_name}")
                         st.warning("⏳ **Estado:** Pendiente de autorización del cliente")
 
+                        st.markdown("---")
+                        st.markdown("### 👨‍💼 PASO 2: Configuración del ADMIN")
+
                         st.markdown("""
-                        **Próximos pasos:**
-                        1. 📧 Envía el enlace de arriba al cliente
-                        2. ⏳ Espera a que el cliente autorice con su cuenta de Google
-                        3. ✅ Cuando esté autorizado, podrás configurar el proyecto/dataset en la pestaña "Enlaces Existentes"
-                        4. 🚀 Usa el enlace final para acceder a los datos del cliente
+                        **Después de que el cliente autorice:**
+
+                        1. 📧 **Cliente** recibe el enlace de arriba y autoriza con su cuenta Google
+                        2. ⏳ **Tú** recibirás notificación (verifica en pestaña "Enlaces Existentes")
+                        3. ⚙️ **Tú** configuras el proyecto/dataset en "Enlaces Existentes"
+                        4. 🔗 **Tú** obtienes el "Enlace de Visualización Admin" para ver los datos
+                        """)
+
+                        st.markdown("---")
+                        st.markdown("### 📊 PASO 3: Enlace de Visualización ADMIN")
+
+                        st.info("""
+                        ℹ️ **Este enlace estará disponible después de configurar el proyecto/dataset**
+
+                        - Solo TÚ (admin) usarás este enlace
+                        - Con este enlace verás los datos del cliente
+                        - El cliente NUNCA usa este enlace
+
+                        Lo encontrarás en la pestaña "Enlaces Existentes" una vez configurado.
                         """)
                     else:
                         # Mostrar el enlace generado (flujo tradicional)
@@ -441,15 +468,17 @@ with tab2:
 
                 # URLs según el estado
                 if oauth_status == 'pending':
-                    st.write("**🔐 Enlace de OAuth (enviar al cliente):**")
+                    st.write("**📧 Enlace de Autorización CLIENTE (enviar al cliente):**")
                     oauth_url = AccessManager.get_oauth_url(selected_token)
                     st.code(oauth_url, language=None)
-                    st.caption("Envía este enlace al cliente para que autorice el acceso")
+                    st.warning("⚠️ Este enlace es SOLO para el cliente. El cliente autorizará, NO accederá a la herramienta.")
+                    st.caption("💡 Envía este enlace al cliente para que autorice el acceso a sus datos")
                 elif oauth_status == 'configured' or oauth_status == 'not_required':
-                    st.write("**🔗 Enlace de Acceso (para usar tú):**")
+                    st.write("**👨‍💼 Enlace de Visualización ADMIN (solo para ti):**")
                     access_url = AccessManager.get_access_url(selected_token)
                     st.code(access_url, language=None)
-                    st.caption("Usa este enlace para acceder a los datos del cliente")
+                    st.success("✅ Este enlace es SOLO para ti (admin). Úsalo para ver los datos del cliente.")
+                    st.caption(f"📊 Con este enlace verás los datos de: **{token_data.get('client_name')}**")
 
             # Formulario de configuración para tokens autorizados
             if oauth_status == 'authorized':

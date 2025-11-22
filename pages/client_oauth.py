@@ -120,18 +120,28 @@ def handle_oauth_callback(token: str):
 
                     Tu autorización ha sido registrada correctamente.
 
-                    #### ¿Qué sigue?
+                    #### ✅ Autorización Completada
 
-                    1. ✅ Has autorizado el acceso a tu cuenta de BigQuery
-                    2. 📧 El administrador será notificado
-                    3. ⚙️ El administrador configurará el proyecto y dataset específico
-                    4. 🚀 Una vez configurado, el administrador podrá acceder a tus datos
+                    Has autorizado exitosamente a **FLAT 101 Digital Business** para acceder a tus datos de BigQuery.
+
+                    #### 📝 ¿Qué sigue ahora?
+
+                    1. ✅ **Has autorizado** el acceso a tu cuenta de BigQuery
+                    2. 📧 **FLAT 101** seleccionará el proyecto y dataset específico a analizar
+                    3. 📊 **FLAT 101** realizará los análisis de tus datos de GA4
+                    4. 📨 **Recibirás** los reportes y análisis de tu gestor de cuenta
+
+                    #### ❌ Recuerda:
+
+                    - Esta herramienta es de uso exclusivo de FLAT 101
+                    - Tú NO tendrás acceso a dashboards ni reportes aquí
+                    - Los análisis te serán entregados directamente por tu gestor
 
                     **Puedes cerrar esta ventana ahora.**
 
                     ---
 
-                    *Si tienes alguna pregunta, contacta al administrador que te envió este enlace.*
+                    *Si tienes alguna pregunta sobre los análisis o quieres revocar el acceso, contacta a tu gestor de cuenta en FLAT 101.*
                     """)
 
                     return True
@@ -270,12 +280,19 @@ if oauth_status == 'not_required':
 if oauth_status == 'pending':
 
     # Header
-    st.title("🔐 Autorización de Acceso")
+    st.title("🔐 Autorización de Acceso a tus Datos")
+
+    st.warning("""
+    ⚠️ **IMPORTANTE:** Esta página es SOLO para autorizar el acceso a tus datos.
+
+    **Tú NO tendrás acceso a la herramienta de análisis.**
+    """)
+
     st.markdown(f"""
     ### Hola, **{token_data['client_name']}**
 
-    Para que el administrador pueda acceder a tus datos de Google BigQuery,
-    necesitamos que autorices el acceso mediante tu cuenta de Google.
+    **FLAT 101 Digital Business** te solicita permiso para acceder a tus datos de Google BigQuery
+    con el fin de realizar análisis de Google Analytics 4 en tu nombre.
     """)
 
     st.divider()
@@ -284,33 +301,44 @@ if oauth_status == 'pending':
     st.markdown("""
     ## 🛡️ ¿Qué estás autorizando?
 
-    Al hacer clic en el botón de abajo, se te pedirá:
+    Al hacer clic en el botón de abajo, autorizarás a FLAT 101 para:
 
-    1. **Iniciar sesión con tu cuenta de Google** (si no lo has hecho ya)
-    2. **Autorizar el acceso a BigQuery** para que el administrador pueda:
-       - Ver tus proyectos de BigQuery
-       - Ejecutar consultas en tu nombre
-       - Acceder a los datos de Analytics que especifiques
+    1. **Ver tus proyectos de BigQuery**
+    2. **Ejecutar consultas de análisis** en tu nombre
+    3. **Acceder a los datos de GA4** que especifiques
+
+    ## ❌ ¿Qué NO incluye esta autorización?
+
+    - ❌ **NO tendrás acceso** a la plataforma de análisis
+    - ❌ **NO verás dashboards** ni reportes en esta herramienta
+    - ❌ **NO podrás ejecutar** consultas por tu cuenta
+
+    ## 📊 ¿Cómo recibirás los análisis?
+
+    - ✅ Tu gestor de cuenta de FLAT 101 te entregará los reportes
+    - ✅ Los análisis se realizarán usando tus credenciales autorizadas
+    - ✅ Solo se accederá a los datos que tú autorices
 
     ## 🔒 Seguridad y Privacidad
 
-    - ✅ Solo el administrador que creó este enlace tendrá acceso
-    - ✅ El acceso es específico al proyecto/dataset que elijas
-    - ✅ Puedes revocar el acceso en cualquier momento
+    - ✅ Solo FLAT 101 tendrá acceso mediante este enlace
+    - ✅ El acceso es específico al proyecto/dataset que autorices
+    - ✅ Puedes revocar el acceso en cualquier momento contactando a tu gestor
     - ✅ No compartimos tu información con terceros
 
     ## 📝 ¿Qué sigue después de autorizar?
 
-    1. Autorizas el acceso (este paso)
-    2. El administrador selecciona el proyecto y dataset específico
-    3. El administrador puede empezar a trabajar con tus datos
+    1. **Tú autorizas** el acceso (este paso)
+    2. **FLAT 101 selecciona** el proyecto y dataset específico a analizar
+    3. **FLAT 101 realiza** los análisis y te entrega los reportes
+    4. **Puedes cerrar** esta ventana una vez completada la autorización
 
     ---
     """)
 
     st.info("""
     **💡 Importante:** Asegúrate de iniciar sesión con la cuenta de Google
-    que tiene acceso al proyecto de BigQuery que quieres compartir.
+    que tiene acceso al proyecto de BigQuery que quieres compartir con FLAT 101.
     """)
 
     st.divider()
