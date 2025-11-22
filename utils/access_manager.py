@@ -261,10 +261,10 @@ class AccessManager:
         if base_url is None:
             # Intentar obtener de secrets
             try:
-                base_url = st.secrets.get("app_url", "https://your-app.streamlit.app")
+                base_url = st.secrets.get("app_url", "https://modular-t4qqlkh4xr4wdblf4eyjjo.streamlit.app")
             except:
-                base_url = "https://your-app.streamlit.app"
-        
+                base_url = "https://modular-t4qqlkh4xr4wdblf4eyjjo.streamlit.app"
+
         # Construir URL con query parameter (Vista Admin)
         return f"{base_url}/admin_client_view?token={token}"
     
@@ -449,9 +449,9 @@ class AccessManager:
         """
         if base_url is None:
             try:
-                base_url = st.secrets.get("app_url", "https://your-app.streamlit.app")
+                base_url = st.secrets.get("app_url", "https://modular-t4qqlkh4xr4wdblf4eyjjo.streamlit.app")
             except:
-                base_url = "https://your-app.streamlit.app"
+                base_url = "https://modular-t4qqlkh4xr4wdblf4eyjjo.streamlit.app"
 
         return f"{base_url}/client_oauth?token={token}"
 

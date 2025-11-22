@@ -633,7 +633,7 @@ with tab3:
     st.markdown("""
     Para configurar la URL base, añade esto a tus **Secrets de Streamlit**:
 ```toml
-    app_url = "https://tu-app.streamlit.app"
+    app_url = "https://modular-t4qqlkh4xr4wdblf4eyjjo.streamlit.app"
 ```
     """)
     
