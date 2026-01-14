@@ -87,13 +87,15 @@ def mostrar_comparativa_eventos(df):
         fig_funnel = go.Figure(go.Funnel(
             y=funnel_events,
             x=funnel_values,
-            textinfo="value+percent initial",
+            textposition="inside",
+            texttemplate="<b>%{value:,.0f}</b><br>%{percentInitial}",
             opacity=0.8,
             marker={"color": list(Settings.CHART_COLORS.values())[:len(funnel_events)]}
         ))
         
         fig_funnel.update_layout(title="Funnel de Conversión de Ecommerce")
         st.plotly_chart(fig_funnel, use_container_width=True)
+
 
 def mostrar_ingresos_transacciones(df):
     """Visualización SIMPLIFICADA para ingresos y transacciones"""
