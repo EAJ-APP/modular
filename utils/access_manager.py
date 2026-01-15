@@ -14,22 +14,54 @@ from google.cloud import bigquery
 
 class AccessManager:
     """Gestiona los accesos de clientes mediante tokens y restricciones"""
-    
+
     # Key para almacenar tokens en secrets o session_state
     TOKENS_KEY = 'client_access_tokens'
-    
+    TOKENS_FILE = '/tmp/client_tokens.json'  # Archivo temporal para persistencia
+
+    @staticmethod
+    def load_tokens_from_file():
+        """Carga tokens desde archivo JSON"""
+        try:
+            import os
+            if os.path.exists(AccessManager.TOKENS_FILE):
+                with open(AccessManager.TOKENS_FILE, 'r') as f:
+                    return json.load(f)
+        except Exception as e:
+            st.warning(f"No se pudieron cargar tokens desde archivo: {e}")
+        return {}
+
+    @staticmethod
+    def save_tokens_to_file(tokens):
+        """Guarda tokens en archivo JSON"""
+        try:
+            with open(AccessManager.TOKENS_FILE, 'w') as f:
+                json.dump(tokens, f, indent=2)
+            return True
+        except Exception as e:
+            st.error(f"Error guardando tokens: {e}")
+            return False
+
     @staticmethod
     def initialize_tokens():
         """Inicializa el sistema de tokens si no existe"""
         if AccessManager.TOKENS_KEY not in st.session_state:
-            # Intentar cargar desde secrets si existen
-            try:
-                if AccessManager.TOKENS_KEY in st.secrets:
-                    st.session_state[AccessManager.TOKENS_KEY] = dict(st.secrets[AccessManager.TOKENS_KEY])
-                else:
-                    st.session_state[AccessManager.TOKENS_KEY] = {}
-            except:
-                st.session_state[AccessManager.TOKENS_KEY] = {}
+            # 1. Intentar cargar desde archivo (prioridad más alta)
+            tokens = AccessManager.load_tokens_from_file()
+
+            # 2. Si no hay tokens en archivo, intentar desde secrets
+            if not tokens:
+                try:
+                    if AccessManager.TOKENS_KEY in st.secrets:
+                        tokens = dict(st.secrets[AccessManager.TOKENS_KEY])
+                except:
+                    pass
+
+            # 3. Si tampoco hay en secrets, inicializar vacío
+            if not tokens:
+                tokens = {}
+
+            st.session_state[AccessManager.TOKENS_KEY] = tokens
     
     @staticmethod
     def generate_token() -> str:
@@ -96,6 +128,9 @@ class AccessManager:
         # Guardar en session_state
         st.session_state[AccessManager.TOKENS_KEY][token] = access_data
 
+        # Persistir en archivo
+        AccessManager.save_tokens_to_file(st.session_state[AccessManager.TOKENS_KEY])
+
         return access_data
     
     @staticmethod
@@ -130,7 +165,10 @@ class AccessManager:
         # Actualizar contador de accesos
         access_data['access_count'] = access_data.get('access_count', 0) + 1
         access_data['last_access'] = datetime.now().isoformat()
-        
+
+        # Persistir cambios
+        AccessManager.save_tokens_to_file(st.session_state[AccessManager.TOKENS_KEY])
+
         return access_data
     
     @staticmethod
@@ -143,66 +181,69 @@ class AccessManager:
     def revoke_token(token: str) -> bool:
         """
         Revoca un token (lo marca como inactivo)
-        
+
         Args:
             token: Token a revocar
-            
+
         Returns:
             True si se revocó exitosamente
         """
         AccessManager.initialize_tokens()
-        
+
         tokens = st.session_state[AccessManager.TOKENS_KEY]
-        
+
         if token in tokens:
             tokens[token]['active'] = False
+            AccessManager.save_tokens_to_file(tokens)
             return True
-        
+
         return False
     
     @staticmethod
     def delete_token(token: str) -> bool:
         """
         Elimina completamente un token
-        
+
         Args:
             token: Token a eliminar
-            
+
         Returns:
             True si se eliminó exitosamente
         """
         AccessManager.initialize_tokens()
-        
+
         tokens = st.session_state[AccessManager.TOKENS_KEY]
-        
+
         if token in tokens:
             del tokens[token]
+            AccessManager.save_tokens_to_file(tokens)
             return True
-        
+
         return False
     
     @staticmethod
     def extend_expiration(token: str, additional_days: int) -> bool:
         """
         Extiende la fecha de expiración de un token
-        
+
         Args:
             token: Token a extender
             additional_days: Días adicionales
-            
+
         Returns:
             True si se extendió exitosamente
         """
         AccessManager.initialize_tokens()
-        
+
         tokens = st.session_state[AccessManager.TOKENS_KEY]
-        
+
         if token in tokens:
             current_expiration = datetime.fromisoformat(tokens[token]['expiration_date'])
             new_expiration = current_expiration + timedelta(days=additional_days)
             tokens[token]['expiration_date'] = new_expiration.isoformat()
+            AccessManager.save_tokens_to_file(tokens)
             return True
-        
+
         return False
     
     @staticmethod
@@ -220,12 +261,12 @@ class AccessManager:
         if base_url is None:
             # Intentar obtener de secrets
             try:
-                base_url = st.secrets.get("app_url", "https://your-app.streamlit.app")
+                base_url = st.secrets.get("app_url", "https://modular-t4qqlkh4xr4wdblf4eyjjo.streamlit.app")
             except:
-                base_url = "https://your-app.streamlit.app"
-        
-        # Construir URL con query parameter
-        return f"{base_url}/client_access?token={token}"
+                base_url = "https://modular-t4qqlkh4xr4wdblf4eyjjo.streamlit.app"
+
+        # Construir URL con query parameter (Vista Admin)
+        return f"{base_url}/admin_client_view?token={token}"
     
     @staticmethod
     def get_token_stats() -> Dict:
@@ -276,16 +317,17 @@ class AccessManager:
     def import_tokens_from_json(json_str: str) -> bool:
         """
         Importa tokens desde formato JSON
-        
+
         Args:
             json_str: String JSON con tokens
-            
+
         Returns:
             True si se importó exitosamente
         """
         try:
             tokens = json.loads(json_str)
             st.session_state[AccessManager.TOKENS_KEY] = tokens
+            AccessManager.save_tokens_to_file(tokens)
             return True
         except Exception as e:
             st.error(f"Error importando tokens: {e}")
@@ -362,6 +404,7 @@ class AccessManager:
             tokens[token]['oauth_credentials'] = credentials_dict
             tokens[token]['oauth_status'] = 'authorized'
             tokens[token]['oauth_authorized_at'] = datetime.now().isoformat()
+            AccessManager.save_tokens_to_file(tokens)
             return True
 
         return False
@@ -387,6 +430,7 @@ class AccessManager:
             tokens[token]['project_id'] = project_id
             tokens[token]['dataset_id'] = dataset_id
             tokens[token]['oauth_status'] = 'configured'
+            AccessManager.save_tokens_to_file(tokens)
             return True
 
         return False
@@ -405,9 +449,9 @@ class AccessManager:
         """
         if base_url is None:
             try:
-                base_url = st.secrets.get("app_url", "https://your-app.streamlit.app")
+                base_url = st.secrets.get("app_url", "https://modular-t4qqlkh4xr4wdblf4eyjjo.streamlit.app")
             except:
-                base_url = "https://your-app.streamlit.app"
+                base_url = "https://modular-t4qqlkh4xr4wdblf4eyjjo.streamlit.app"
 
         return f"{base_url}/client_oauth?token={token}"
 

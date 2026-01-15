@@ -1,6 +1,6 @@
 """
-Página de Acceso Restringido para Clientes
-Permite acceso limitado mediante token único
+Página de Visualización Admin
+Permite al admin ver datos de clientes usando sus credenciales OAuth
 """
 
 import streamlit as st
@@ -34,9 +34,9 @@ def import_tabs():
 
 # Configuración de página
 st.set_page_config(
-    page_title="BigQuery Shield - Acceso Cliente",
+    page_title="BigQuery Shield - Vista Admin",
     layout="wide",
-    page_icon="🛡️"
+    page_icon="👨‍💼"
 )
 
 # CSS personalizado
@@ -46,26 +46,38 @@ st.markdown("""
         [data-testid="stSidebarNav"] {
             display: none;
         }
-        
-        /* Estilo para el banner de cliente */
-        .client-banner {
-            background: linear-gradient(90deg, #1976D2 0%, #42A5F5 100%);
+
+        /* Estilo para el banner de admin */
+        .admin-banner {
+            background: linear-gradient(90deg, #6A1B9A 0%, #8E24AA 100%);
             color: white;
-            padding: 15px 20px;
+            padding: 20px 25px;
             border-radius: 10px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            border-left: 5px solid #FFD700;
         }
-        
-        .client-banner h2 {
+
+        .admin-banner h2 {
             margin: 0;
             font-size: 24px;
         }
-        
-        .client-banner p {
+
+        .admin-banner p {
             margin: 5px 0 0 0;
             font-size: 14px;
-            opacity: 0.9;
+            opacity: 0.95;
+        }
+
+        .admin-badge {
+            background-color: #FFD700;
+            color: #6A1B9A;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 10px;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -147,17 +159,26 @@ if not project_id or not dataset_id:
     st.info("Por favor, contacta al administrador.")
     st.stop()
 
-# Banner de bienvenida personalizado
+# Banner de admin viendo datos del cliente
 st.markdown(f"""
-<div class="client-banner">
-    <h2>🛡️ BigQuery Shield - {client_name}</h2>
-    <p>Acceso restringido a análisis de {dataset_id}</p>
+<div class="admin-banner">
+    <h2>👨‍💼 Vista Admin <span class="admin-badge">ADMIN</span></h2>
+    <p>📊 Visualizando datos de: <strong>{client_name}</strong></p>
+    <p style="font-size: 12px; margin-top: 5px;">Dataset: {project_id}.{dataset_id}</p>
 </div>
 """, unsafe_allow_html=True)
 
+# Advertencia clara de que es vista admin
+st.warning("""
+⚠️ **VISTA DE ADMINISTRADOR**
+
+Estás viendo los datos del cliente usando sus credenciales OAuth autorizadas.
+El cliente NO tiene acceso a esta herramienta.
+""")
+
 # Información de acceso en sidebar
 with st.sidebar:
-    st.success("✅ Acceso Autorizado")
+    st.success("✅ Modo Admin Activo")
     
     st.write("**Cliente:**")
     st.info(client_name)

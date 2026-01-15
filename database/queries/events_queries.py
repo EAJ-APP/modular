@@ -174,7 +174,6 @@ def generar_query_eventos_resumen(project, dataset, start_date, end_date):
         event_name
     ORDER BY
         total_events DESC
-    LIMIT 50
     """
 
 def generar_query_eventos_por_fecha(project, dataset, start_date, end_date):
