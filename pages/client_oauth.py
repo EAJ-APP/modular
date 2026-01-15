@@ -282,12 +282,6 @@ if oauth_status == 'pending':
     # Header
     st.title("🔐 Autorización de Acceso a tus Datos")
 
-    st.warning("""
-    ⚠️ **IMPORTANTE:** Esta página es SOLO para autorizar el acceso a tus datos.
-
-    **Tú NO tendrás acceso a la herramienta de análisis.**
-    """)
-
     st.markdown(f"""
     ### Hola, **{token_data['client_name']}**
 
@@ -306,12 +300,6 @@ if oauth_status == 'pending':
     1. **Ver tus proyectos de BigQuery**
     2. **Ejecutar consultas de análisis** en tu nombre
     3. **Acceder a los datos de GA4** que especifiques
-
-    ## ❌ ¿Qué NO incluye esta autorización?
-
-    - ❌ **NO tendrás acceso** a la plataforma de análisis
-    - ❌ **NO verás dashboards** ni reportes en esta herramienta
-    - ❌ **NO podrás ejecutar** consultas por tu cuenta
 
     ## 📊 ¿Cómo recibirás los análisis?
 
