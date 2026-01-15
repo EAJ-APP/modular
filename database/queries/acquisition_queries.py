@@ -240,7 +240,7 @@ def generar_query_atribucion_marketing(project, dataset, start_date, end_date):
     FROM combined_models
     WHERE attributed_conversions > 0
     ORDER BY attribution_model, attributed_revenue DESC
-    LIMIT 100
+    LIMIT 500
     """
 
 def generar_query_atribucion_completa(project, dataset, start_date, end_date):
