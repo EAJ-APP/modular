@@ -194,7 +194,7 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
       GROUP BY product_a, product_b
       HAVING times_bought_together >= 5
       ORDER BY times_bought_together DESC
-      LIMIT 100
+      LIMIT 500
     )
     
     SELECT
