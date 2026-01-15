@@ -76,7 +76,7 @@ def run_query(client, query, timeout=30, show_stats=False):
                     st.metric("Datos facturados", stats['total_billed_readable'])
                 with col3:
                     cost_display = f"${stats['estimated_cost_usd']:.6f}"
-                    st.metric("Costo estimado", cost_display)
+                    st.metric("Coste estimado", cost_display)
         
         return result_df
         
@@ -111,7 +111,7 @@ def run_query_with_estimate(client, query, timeout=30):
             with col2:
                 st.metric("GB estimados", f"{estimate['total_gb']} GB")
             with col3:
-                st.metric("Costo estimado", f"${estimate['estimated_cost_usd']:.6f}")
+                st.metric("Coste estimado", f"${estimate['estimated_cost_usd']:.6f}")
             
             # Alerta si es una consulta grande
             if estimate['total_gb'] > 10:

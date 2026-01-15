@@ -48,38 +48,32 @@ def main():
 
 def show_main_app():
     """Muestra la aplicación principal (después de autenticación)"""
-    
+
     # Importar componentes
     import_app_components()
-    
+
     # Configuración inicial
     check_dependencies()
     setup_environment()
-    
+
     # Configuración de página
     st.set_page_config(
-        page_title="BigQuery Shield | FLAT 101", 
+        page_title="BigQuery Shield | FLAT 101",
         layout=Settings.PAGE_LAYOUT,
         page_icon="🛡️",
         initial_sidebar_state="expanded"
     )
-    
+
     # Refrescar credenciales OAuth si es necesario
     if SessionManager.get_auth_method() == 'oauth':
         SessionManager.refresh_oauth_credentials()
-    
-    # Header con usuario y logout
-    render_header()
-    
-    # Línea divisoria
-    st.divider()
 
-    # Renderizar sidebar y obtener configuración
+    # Renderizar sidebar y obtener configuración PRIMERO
     development_mode, start_date, end_date = render_sidebar()
 
     # Obtener cliente de BigQuery desde la sesión
     client = SessionManager.get_bigquery_client()
-    
+
     if not client:
         st.error("❌ Error: No hay cliente de BigQuery disponible")
         if st.button("🔄 Reiniciar sesión"):
@@ -93,6 +87,12 @@ def show_main_app():
     except Exception as e:
         st.error(f"Error al cargar proyectos y datasets: {e}")
         return
+
+    # Header con usuario, billing y logout (DESPUÉS de obtener proyecto)
+    render_header(selected_project)
+
+    # Línea divisoria
+    st.divider()
     
     # Mostrar info de dataset seleccionado de forma compacta
     with st.expander("ℹ️ Información del Proyecto", expanded=False):
@@ -146,7 +146,7 @@ def show_main_app():
     with footer_col3:
         st.caption(f"v1.0.0")
 
-def render_header():
+def render_header(selected_project=None):
     """Renderiza el header con información del usuario, billing y logout"""
     from utils.billing_info import BillingCalculator
 
@@ -185,7 +185,7 @@ def render_header():
         st.markdown("**💰 Billing**")
 
         # Proyecto facturado
-        billing_project = BillingCalculator.get_billing_project()
+        billing_project = BillingCalculator.get_billing_project(selected_project)
         st.caption(f"🏦 Factura a: {billing_project}")
 
         # Información de última query
@@ -193,7 +193,7 @@ def render_header():
         if last_query:
             st.caption(f"📊 Última Query:")
             st.caption(f"  • GB: {last_query['gb_used']:.3f} GB")
-            st.caption(f"  • Costo: ${last_query['cost']:.6f}")
+            st.caption(f"  • Coste: ${last_query['cost']:.6f}")
         else:
             st.caption("📊 Última Query: N/A")
 

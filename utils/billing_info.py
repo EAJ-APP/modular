@@ -1,32 +1,39 @@
 """
-Utilidades para cálculo de costos y billing de BigQuery
+Utilidades para cálculo de costes y billing de BigQuery
 """
 import streamlit as st
 from typing import Dict, Optional
 
 class BillingCalculator:
-    """Calcula costos de consultas BigQuery"""
+    """Calcula costes de consultas BigQuery"""
 
     # Precio estándar de BigQuery: $5 por TB = $0.005 por GB
     PRICE_PER_GB = 0.005
 
     @staticmethod
-    def get_billing_project() -> str:
+    def get_billing_project(selected_project: Optional[str] = None) -> str:
         """
         Obtiene el proyecto que será facturado por las consultas
+
+        Args:
+            selected_project: Proyecto seleccionado actualmente en el sidebar
 
         Returns:
             str: ID del proyecto o mensaje indicando el tipo
         """
         from auth import SessionManager
 
-        client = SessionManager.get_bigquery_client()
         auth_method = SessionManager.get_auth_method()
 
-        if not client:
-            return "No disponible"
-
-        project_id = client.project
+        # Usar el proyecto seleccionado si está disponible
+        if selected_project:
+            project_id = selected_project
+        else:
+            # Fallback al proyecto del cliente
+            client = SessionManager.get_bigquery_client()
+            if not client:
+                return "No disponible"
+            project_id = client.project
 
         # Determinar si es cliente o FLAT 101
         if auth_method == 'oauth':
@@ -37,13 +44,13 @@ class BillingCalculator:
     @staticmethod
     def calculate_query_cost(gb_used: float) -> float:
         """
-        Calcula el costo de una consulta en USD
+        Calcula el coste de una consulta en USD
 
         Args:
             gb_used: GB procesados por la consulta
 
         Returns:
-            float: Costo en USD
+            float: Coste en USD
         """
         return gb_used * BillingCalculator.PRICE_PER_GB
 
@@ -81,7 +88,7 @@ class BillingCalculator:
         Obtiene información total de la sesión
 
         Returns:
-            Dict con GB totales y costo total de la sesión
+            Dict con GB totales y coste total de la sesión
         """
         monitoring_data = st.session_state.get('monitoring_data', [])
 
