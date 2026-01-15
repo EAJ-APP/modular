@@ -121,7 +121,7 @@ def generar_query_clv_sesiones(project, dataset, start_date, end_date):
     LEFT JOIN user_revenue ur ON us.user_pseudo_id = ur.user_pseudo_id
     WHERE us.total_sessions > 0
     ORDER BY customer_lifetime_value DESC
-    LIMIT 1000
+    LIMIT 5000
     """
 
 def generar_query_tiempo_primera_compra(project, dataset, start_date, end_date):
