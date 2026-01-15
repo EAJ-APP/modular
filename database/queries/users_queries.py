@@ -74,6 +74,8 @@ def generar_query_clv_sesiones(project, dataset, start_date, end_date):
     Customer Lifetime Value (CLV) with Sessions
     Calcula el CLV y total de sesiones por usuario
     """
+    from config.settings import Settings
+
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
@@ -121,7 +123,7 @@ def generar_query_clv_sesiones(project, dataset, start_date, end_date):
     LEFT JOIN user_revenue ur ON us.user_pseudo_id = ur.user_pseudo_id
     WHERE us.total_sessions > 0
     ORDER BY customer_lifetime_value DESC
-    LIMIT 1000
+    LIMIT {Settings.QUERY_LIMITS['clv']}
     """
 
 def generar_query_tiempo_primera_compra(project, dataset, start_date, end_date):
@@ -129,6 +131,8 @@ def generar_query_tiempo_primera_compra(project, dataset, start_date, end_date):
     Time from First Visit to Purchase by Source
     Analiza el tiempo entre primera visita y compra por fuente de tráfico
     """
+    from config.settings import Settings
+
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
@@ -188,7 +192,7 @@ def generar_query_tiempo_primera_compra(project, dataset, start_date, end_date):
     GROUP BY first_source, first_medium
     HAVING users_with_purchase >= 5
     ORDER BY users_with_purchase DESC
-    LIMIT 100
+    LIMIT {Settings.QUERY_LIMITS['tiempo_compra']}
     """
 
 def generar_query_landing_page_attribution(project, dataset, start_date, end_date):
@@ -196,6 +200,8 @@ def generar_query_landing_page_attribution(project, dataset, start_date, end_dat
     First Landing Page Attribution
     Atribuye métricas clave (views, add-to-cart, purchases) a la primera landing page
     """
+    from config.settings import Settings
+
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
@@ -246,7 +252,7 @@ def generar_query_landing_page_attribution(project, dataset, start_date, end_dat
     GROUP BY ufl.first_landing_page
     HAVING unique_users >= 10
     ORDER BY total_revenue DESC
-    LIMIT 100
+    LIMIT {Settings.QUERY_LIMITS['landing_pages']}
     """
 
 def generar_query_adquisicion_usuarios(project, dataset, start_date, end_date):
@@ -254,6 +260,8 @@ def generar_query_adquisicion_usuarios(project, dataset, start_date, end_date):
     User Acquisition by Source/Medium with Channel Grouping
     Agrupa usuarios por fuente, medio y categorías predefinidas
     """
+    from config.settings import Settings
+
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
@@ -325,7 +333,7 @@ def generar_query_adquisicion_usuarios(project, dataset, start_date, end_date):
     GROUP BY cg.channel_group, cg.first_source, cg.first_medium
     HAVING total_users >= 5
     ORDER BY total_users DESC
-    LIMIT 100
+    LIMIT {Settings.QUERY_LIMITS['adquisicion']}
     """
 
 def generar_query_conversion_mensual(project, dataset, start_date, end_date):

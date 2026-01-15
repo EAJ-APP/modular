@@ -107,6 +107,8 @@ def generar_query_canales_trafico(project, dataset, start_date, end_date):
 
 def generar_query_atribucion_marketing(project, dataset, start_date, end_date):
     """Consulta SIMPLIFICADA para atribución básica (3 modelos)"""
+    from config.settings import Settings
+
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
@@ -240,11 +242,13 @@ def generar_query_atribucion_marketing(project, dataset, start_date, end_date):
     FROM combined_models
     WHERE attributed_conversions > 0
     ORDER BY attribution_model, attributed_revenue DESC
-    LIMIT 100
+    LIMIT {Settings.QUERY_LIMITS['atribucion_basica']}
     """
 
 def generar_query_atribucion_completa(project, dataset, start_date, end_date):
     """Consulta COMPLETAMENTE NUEVA para 7 modelos - CON DATA DRIVEN MEJORADO Y CORREGIDO"""
+    from config.settings import Settings
+
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
@@ -506,5 +510,5 @@ def generar_query_atribucion_completa(project, dataset, start_date, end_date):
     FROM all_models
     WHERE attributed_conversions > 0
     ORDER BY attribution_model, attributed_revenue DESC
-    LIMIT 1000
+    LIMIT {Settings.QUERY_LIMITS['atribucion_completa']}
     """
