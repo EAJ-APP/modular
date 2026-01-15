@@ -241,7 +241,6 @@ def generar_query_consentimiento_por_geografia(project, dataset, start_date, end
     FROM geo_consent
     WHERE total_events >= 10  -- Filtrar localizaciones con volumen significativo
     ORDER BY total_events DESC
-    LIMIT 500
     """
 
 def generar_query_consentimiento_por_fuente_trafico(project, dataset, start_date, end_date):
@@ -354,5 +353,4 @@ def generar_query_consentimiento_por_fuente_trafico(project, dataset, start_date
     FROM traffic_consent
     WHERE total_events >= 10  -- Filtrar fuentes con volumen significativo
     ORDER BY total_events DESC
-    LIMIT 500
     """
