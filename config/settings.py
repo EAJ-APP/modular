@@ -45,8 +45,8 @@ class Settings:
         'atribucion_basica': 500,  # Atribución 3 modelos
         'clv': 5000,              # CLV por usuario
         'funnel_producto': 200,    # Funnel por producto
-        'sessions_low_converting': 200,  # Sesiones sin conversión
-        'session_paths': 1000,     # Rutas de navegación
+        'sessions_low_converting': 100,  # Sesiones sin conversión (reducido por quotas)
+        'session_paths': 500,     # Rutas de navegación (reducido por quotas)
         'exit_pages': 500,         # Páginas de salida
         'landing_pages': 200,      # Landing pages attribution
         'tiempo_compra': 200,      # Tiempo a primera compra
