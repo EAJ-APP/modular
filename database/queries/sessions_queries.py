@@ -3,6 +3,8 @@ def generar_query_exit_pages(project, dataset, start_date, end_date):
     Consulta para analizar las páginas de salida más frecuentes
     Identifica dónde los usuarios abandonan el sitio
     """
+    from config.settings import Settings
+
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
@@ -56,7 +58,7 @@ def generar_query_exit_pages(project, dataset, start_date, end_date):
       ROUND((sessions / total) * 100, 2) AS exit_percentage
     FROM exit_page_stats, total_sessions
     ORDER BY sessions DESC
-    LIMIT 100
+    LIMIT {Settings.QUERY_LIMITS['exit_pages']}
     """
 
 def generar_query_hourly_sessions_performance(project, dataset, start_date, end_date):
@@ -178,6 +180,8 @@ def generar_query_session_path_analysis(project, dataset, start_date, end_date):
     Consulta para analizar los caminos de navegación de los usuarios
     Identifica patrones de navegación: página anterior -> página actual -> página siguiente
     """
+    from config.settings import Settings
+
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
@@ -248,11 +252,11 @@ def generar_query_session_path_analysis(project, dataset, start_date, end_date):
       previous_page,
       current_page,
       next_page
-    HAVING 
+    HAVING
       current_page NOT IN (previous_page, next_page) -- Filter out loops
-    ORDER BY 
+    ORDER BY
       session_count DESC
-    LIMIT 500
+    LIMIT {Settings.QUERY_LIMITS['session_paths']}
     """
 
 def generar_query_low_converting_sessions(project, dataset, start_date, end_date):
@@ -260,6 +264,8 @@ def generar_query_low_converting_sessions(project, dataset, start_date, end_date
     Consulta para analizar sesiones con baja conversión
     Identifica patrones en sesiones que NO convirtieron para encontrar oportunidades de mejora
     """
+    from config.settings import Settings
+
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
@@ -376,5 +382,5 @@ def generar_query_low_converting_sessions(project, dataset, start_date, end_date
       landing_page, exit_page
     HAVING total_non_converting_sessions >= 10  -- Filtrar grupos con volumen significativo
     ORDER BY total_non_converting_sessions DESC
-    LIMIT 100
+    LIMIT {Settings.QUERY_LIMITS['sessions_low_converting']}
     """

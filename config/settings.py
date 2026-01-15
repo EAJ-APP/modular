@@ -30,6 +30,26 @@ class Settings:
     # Configuración de consentimiento
     CONSENT_MAPPING = {
         'true': 'Consentido',
-        'false': 'No Consentido', 
+        'false': 'No Consentido',
         'null': 'No Definido'
+    }
+
+    # Límites de consultas (configurables)
+    # Estos límites controlan el número máximo de resultados devueltos
+    # Valores más altos = más datos pero queries más lentas
+    QUERY_LIMITS = {
+        'default': 1000,           # Límite por defecto
+        'flattenizado': 2000,      # Explorador de datos completo (events)
+        'combos': 500,             # Análisis de combos cross-selling
+        'atribucion_completa': 1000,  # Atribución 7 modelos (muy pesada)
+        'atribucion_basica': 500,  # Atribución 3 modelos
+        'clv': 5000,              # CLV por usuario
+        'funnel_producto': 200,    # Funnel por producto
+        'sessions_low_converting': 200,  # Sesiones sin conversión
+        'session_paths': 1000,     # Rutas de navegación
+        'exit_pages': 500,         # Páginas de salida
+        'landing_pages': 200,      # Landing pages attribution
+        'tiempo_compra': 200,      # Tiempo a primera compra
+        'adquisicion': 200,        # Adquisición de usuarios
+        'small': 100,             # Consultas pequeñas/debug
     }

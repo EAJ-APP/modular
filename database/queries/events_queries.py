@@ -1,5 +1,7 @@
 def generar_query_eventos_flatten(project, dataset, start_date, end_date):
     """Consulta para flattenizar todos los eventos de GA4"""
+    from config.settings import Settings
+
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
@@ -144,12 +146,12 @@ def generar_query_eventos_flatten(project, dataset, start_date, end_date):
         ON fe.user_pseudo_id = fup.user_pseudo_id 
         AND fe.event_timestamp = fup.event_timestamp 
         AND fe.event_name = fup.event_name
-    LEFT JOIN 
-        FlatItems fi 
-        ON fe.user_pseudo_id = fi.user_pseudo_id 
-        AND fe.event_timestamp = fi.event_timestamp 
+    LEFT JOIN
+        FlatItems fi
+        ON fe.user_pseudo_id = fi.user_pseudo_id
+        AND fe.event_timestamp = fi.event_timestamp
         AND fe.event_name = fi.event_name
-    LIMIT 1000
+    LIMIT {Settings.QUERY_LIMITS['flattenizado']}
     """
 
 def generar_query_eventos_resumen(project, dataset, start_date, end_date):

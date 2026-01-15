@@ -104,6 +104,8 @@ def generar_query_relacion_productos(project, dataset, start_date, end_date):
 
 def generar_query_funnel_por_producto(project, dataset, start_date, end_date):
     """Funnel de conversión por producto - VERSIÓN OPTIMIZADA"""
+    from config.settings import Settings
+
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
@@ -147,17 +149,19 @@ def generar_query_funnel_por_producto(project, dataset, start_date, end_date):
       ROUND(SAFE_DIVIDE(purchase, view_item) * 100, 2) AS purchase_rate
     FROM 
       product_metrics
-    WHERE 
+    WHERE
       view_item > 0
-    ORDER BY 
+    ORDER BY
       purchase DESC, view_item DESC
-    LIMIT 100
+    LIMIT {Settings.QUERY_LIMITS['funnel_producto']}
     """
 def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
     """
     Consulta SIMPLE para análisis de combos
     Versión minimalista para evitar timeouts
     """
+    from config.settings import Settings
+
     start_date_str = start_date.strftime('%Y%m%d')
     end_date_str = end_date.strftime('%Y%m%d')
     
@@ -194,7 +198,7 @@ def generar_query_combos_cross_selling(project, dataset, start_date, end_date):
       GROUP BY product_a, product_b
       HAVING times_bought_together >= 5
       ORDER BY times_bought_together DESC
-      LIMIT 500
+      LIMIT {Settings.QUERY_LIMITS['combos']}
     )
     
     SELECT
