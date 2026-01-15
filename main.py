@@ -147,28 +147,30 @@ def show_main_app():
         st.caption(f"v1.0.0")
 
 def render_header():
-    """Renderiza el header con información del usuario y logout"""
+    """Renderiza el header con información del usuario, billing y logout"""
+    from utils.billing_info import BillingCalculator
+
     col1, col2, col3 = st.columns([1, 3, 1])
-    
+
     with col1:
         try:
             st.image("assets/logo.png", width=150)
         except:
             st.markdown("### FLAT 101")
-    
+
     with col2:
         st.title("🛡️ BigQuery Shield")
         st.markdown("**Plataforma de análisis avanzado para Google Analytics 4**")
-    
+
     with col3:
         # Mostrar info del usuario
         user_info = SessionManager.get_user_info()
         auth_method = SessionManager.get_auth_method()
-        
+
         # Mostrar nombre del usuario
         if user_info.get('name'):
             st.markdown(f"**👤 {user_info['name']}**")
-        
+
         # Mostrar método de autenticación
         method_labels = {
             'oauth': '🔐 OAuth',
@@ -176,7 +178,34 @@ def render_header():
             'secrets': '🔑 Secrets'
         }
         st.caption(f"Método: {method_labels.get(auth_method, auth_method)}")
-        
+
+        st.divider()
+
+        # Información de Billing
+        st.markdown("**💰 Billing**")
+
+        # Proyecto facturado
+        billing_project = BillingCalculator.get_billing_project()
+        st.caption(f"🏦 Factura a: {billing_project}")
+
+        # Información de última query
+        last_query = BillingCalculator.get_last_query_info()
+        if last_query:
+            st.caption(f"📊 Última Query:")
+            st.caption(f"  • GB: {last_query['gb_used']:.3f} GB")
+            st.caption(f"  • Costo: ${last_query['cost']:.6f}")
+        else:
+            st.caption("📊 Última Query: N/A")
+
+        # Total de sesión
+        session_info = BillingCalculator.get_session_total_info()
+        if session_info['query_count'] > 0:
+            st.caption(f"💸 Total Sesión: ${session_info['total_cost']:.6f} ({session_info['total_gb']:.3f} GB)")
+        else:
+            st.caption("💸 Total Sesión: $0.000000 (0.000 GB)")
+
+        st.divider()
+
         # Botón de logout
         if st.button("🚪 Cerrar Sesión", type="secondary", use_container_width=True):
             SessionManager.logout()
