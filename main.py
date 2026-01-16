@@ -88,6 +88,14 @@ def show_main_app():
         st.error(f"Error al cargar proyectos y datasets: {e}")
         return
 
+    # Detectar cambio de proyecto y resetear costes
+    if 'current_billing_project' not in st.session_state:
+        st.session_state.current_billing_project = selected_project
+    elif st.session_state.current_billing_project != selected_project:
+        # Proyecto cambió - resetear monitoring data
+        st.session_state.monitoring_data = []
+        st.session_state.current_billing_project = selected_project
+
     # Header con usuario, billing y logout (DESPUÉS de obtener proyecto)
     render_header(selected_project)
 
@@ -179,37 +187,39 @@ def render_header(selected_project=None):
         }
         st.caption(f"Método: {method_labels.get(auth_method, auth_method)}")
 
-        st.divider()
-
-        # Información de Billing
-        st.markdown("**💰 Billing**")
-
-        # Proyecto facturado
-        billing_project = BillingCalculator.get_billing_project(selected_project)
-        st.caption(f"🏦 Factura a: {billing_project}")
-
-        # Información de última query
-        last_query = BillingCalculator.get_last_query_info()
-        if last_query:
-            st.caption(f"📊 Última Query:")
-            st.caption(f"  • GB: {last_query['gb_used']:.3f} GB")
-            st.caption(f"  • Coste: ${last_query['cost']:.6f}")
-        else:
-            st.caption("📊 Última Query: N/A")
-
-        # Total de sesión
-        session_info = BillingCalculator.get_session_total_info()
-        if session_info['query_count'] > 0:
-            st.caption(f"💸 Total Sesión: ${session_info['total_cost']:.6f} ({session_info['total_gb']:.3f} GB)")
-        else:
-            st.caption("💸 Total Sesión: $0.000000 (0.000 GB)")
-
-        st.divider()
-
         # Botón de logout
         if st.button("🚪 Cerrar Sesión", type="secondary", use_container_width=True):
             SessionManager.logout()
             st.rerun()
+
+    # Nueva fila para Billing (debajo del header)
+    st.markdown("---")
+
+    billing_col1, billing_col2, billing_col3, billing_col4 = st.columns(4)
+
+    with billing_col1:
+        st.markdown("**💰 Billing**")
+
+    with billing_col2:
+        # Proyecto facturado
+        billing_project = BillingCalculator.get_billing_project(selected_project)
+        st.caption(f"🏦 Factura a: **{billing_project}**")
+
+    with billing_col3:
+        # Información de última query
+        last_query = BillingCalculator.get_last_query_info()
+        if last_query:
+            st.caption(f"📊 Última Query: **{last_query['gb_used']:.3f} GB** • **${last_query['cost']:.6f}**")
+        else:
+            st.caption("📊 Última Query: **N/A**")
+
+    with billing_col4:
+        # Total de sesión
+        session_info = BillingCalculator.get_session_total_info()
+        if session_info['query_count'] > 0:
+            st.caption(f"💸 Total Sesión: **${session_info['total_cost']:.6f}** • **{session_info['total_gb']:.3f} GB**")
+        else:
+            st.caption("💸 Total Sesión: **$0.000000** • **0.000 GB**")
 
 if __name__ == "__main__":
     main()
