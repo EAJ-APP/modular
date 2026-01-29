@@ -1,23 +1,23 @@
 """
-Módulo para generar análisis de datos con Claude (Anthropic LLM)
+Módulo para generar análisis de datos con Perplexity LLM
 """
 import streamlit as st
 import pandas as pd
-from anthropic import Anthropic
+from openai import OpenAI
 
 
-def get_anthropic_client() -> Anthropic | None:
-    """Obtiene el cliente de Anthropic usando la API key de secrets."""
+def get_perplexity_client() -> OpenAI | None:
+    """Obtiene el cliente de Perplexity usando la API key de secrets."""
     try:
-        api_key = st.secrets["anthropic"]["api_key"]
-        return Anthropic(api_key=api_key)
+        api_key = st.secrets["perplexity"]["api_key"]
+        return OpenAI(api_key=api_key, base_url="https://api.perplexity.ai")
     except Exception:
         return None
 
 
 def generar_insight_tabla(df: pd.DataFrame, contexto: str) -> str | None:
     """
-    Envía los datos de un DataFrame a Claude y devuelve un análisis en texto.
+    Envía los datos de un DataFrame a Perplexity y devuelve un análisis en texto.
 
     Args:
         df: DataFrame con los datos a analizar
@@ -26,11 +26,10 @@ def generar_insight_tabla(df: pd.DataFrame, contexto: str) -> str | None:
     Returns:
         str con el análisis generado o None si falla
     """
-    client = get_anthropic_client()
+    client = get_perplexity_client()
     if not client:
         return None
 
-    # Convertir DataFrame a texto legible (limitar filas para no exceder tokens)
     datos_csv = df.to_csv(index=False)
 
     prompt = f"""Eres un analista de datos especializado en Google Analytics 4 y consentimiento de cookies (GDPR/RGPD).
@@ -51,11 +50,14 @@ Genera un análisis claro y accionable en español. El texto debe ser entendible
 Sé conciso y directo. No repitas los números en bruto, interprétalos."""
 
     try:
-        response = client.messages.create(
-            model="claude-haiku-4-20250414",
+        response = client.chat.completions.create(
+            model="sonar",
             max_tokens=1024,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[
+                {"role": "system", "content": "Eres un analista de datos experto. Responde siempre en español."},
+                {"role": "user", "content": prompt}
+            ]
         )
-        return response.content[0].text
+        return response.choices[0].message.content
     except Exception as e:
         return f"Error al generar análisis: {str(e)}"
