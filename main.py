@@ -16,14 +16,14 @@ def import_app_components():
     global render_sidebar, get_project_dataset_selection
     global show_cookies_tab, show_ecommerce_tab, show_acquisition_tab
     global show_events_tab, show_users_tab, show_sessions_tab, show_monitoring_tab
-    
+
     from config.settings import Settings
     from utils import setup_environment, check_dependencies
     from ui import (
-        render_sidebar, 
-        get_project_dataset_selection, 
-        show_cookies_tab, 
-        show_ecommerce_tab, 
+        render_sidebar,
+        get_project_dataset_selection,
+        show_cookies_tab,
+        show_ecommerce_tab,
         show_acquisition_tab,
         show_events_tab,
         show_users_tab,
@@ -33,16 +33,16 @@ def import_app_components():
 
 def main():
     """Función principal de la aplicación"""
-    
+
     # Inicializar sesión
     SessionManager.initialize_session()
-    
+
     # Verificar si el usuario está autenticado
     if not SessionManager.is_authenticated():
         # Mostrar pantalla de login
         show_login_screen()
         return
-    
+
     # Usuario autenticado - cargar la aplicación principal
     show_main_app()
 
@@ -101,7 +101,7 @@ def show_main_app():
 
     # Línea divisoria
     st.divider()
-    
+
     # Mostrar info de dataset seleccionado de forma compacta
     with st.expander("ℹ️ Información del Proyecto", expanded=False):
         col1, col2, col3 = st.columns(3)
@@ -116,7 +116,7 @@ def show_main_app():
     # Tabs principales
     tab_titles = [
         "🍪 Cookies",
-        "🛒 Ecommerce", 
+        "🛒 Ecommerce",
         "📈 Adquisición",
         "🎯 Eventos",
         "👥 Usuarios",
@@ -124,9 +124,9 @@ def show_main_app():
         "📊 Monitorización"
     ]
     tab_ids = ["cookies", "ecommerce", "acquisition", "events", "users", "sessions", "monitoring"]
-    
+
     tabs = st.tabs(tab_titles)
-    
+
     for tab, tab_id in zip(tabs, tab_ids):
         with tab:
             if tab_id == "cookies":
@@ -143,7 +143,7 @@ def show_main_app():
                 show_sessions_tab(client, selected_project, selected_dataset, start_date, end_date)
             elif tab_id == "monitoring":
                 show_monitoring_tab(client, selected_project)
-    
+
     # Footer profesional
     st.divider()
     footer_col1, footer_col2, footer_col3 = st.columns([2, 2, 1])

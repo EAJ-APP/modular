@@ -180,6 +180,9 @@ def get_project_dataset_selection(client):
         
         # Obtener el project_id real
         selected_project = project_mapping[selected_project_display]
+
+        # Guardar en session_state para que el header de billing lo use
+        st.session_state['selected_project'] = selected_project
         
         # Obtener los datasets GA4 del proyecto seleccionado
         ga4_datasets = ga4_projects[selected_project]
