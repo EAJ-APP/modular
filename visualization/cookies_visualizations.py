@@ -343,7 +343,25 @@ def mostrar_evolucion_temporal_consentimiento(df):
         'ads_undefined_pct': '{:.2f}%',
         'full_consent_pct': '{:.2f}%'
     }), height=400)
-    
+
+    # Botón de análisis con IA
+    if st.button("🤖 Generar análisis con IA", key="btn_ia_evolucion"):
+        from utils.llm_insights import generar_insight_tabla
+        with st.spinner("Analizando datos con Claude..."):
+            resultado = generar_insight_tabla(
+                display_df,
+                contexto="Evolución temporal diaria del consentimiento de cookies (GDPR) en un sitio web. "
+                         "Los porcentajes indican qué proporción de eventos tienen consentimiento concedido, "
+                         "denegado o sin definir, tanto para Analytics como para Ads."
+            )
+            if resultado:
+                st.markdown("---")
+                st.markdown("### 🤖 Análisis generado por IA")
+                st.markdown(resultado)
+                st.markdown("---")
+            else:
+                st.error("No se pudo generar el análisis. Verifica la API key de Anthropic en secrets.toml.")
+
     # Insights clave
     st.subheader("💡 Insights Clave")
     
