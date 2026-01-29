@@ -347,7 +347,7 @@ def mostrar_evolucion_temporal_consentimiento(df):
     # Botón de análisis con IA
     if st.button("🤖 Generar análisis con IA", key="btn_ia_evolucion"):
         from utils.llm_insights import generar_insight_tabla
-        with st.spinner("Analizando datos con Claude..."):
+        with st.spinner("Generando con LLM (IA)..."):
             resultado = generar_insight_tabla(
                 display_df,
                 contexto="Evolución temporal diaria del consentimiento de cookies (GDPR) en un sitio web. "
@@ -360,39 +360,7 @@ def mostrar_evolucion_temporal_consentimiento(df):
                 st.markdown(resultado)
                 st.markdown("---")
             else:
-                st.error("No se pudo generar el análisis. Verifica la API key de Anthropic en secrets.toml.")
-
-    # Insights clave
-    st.subheader("💡 Insights Clave")
-    
-    # Detectar cambios bruscos
-    df['analytics_change'] = df['analytics_granted_pct'].diff().abs()
-    big_changes = df[df['analytics_change'] > 10].sort_values('analytics_change', ascending=False)
-    
-    if not big_changes.empty:
-        st.warning("🚨 **Cambios Bruscos Detectados:**")
-        for _, row in big_changes.head(3).iterrows():
-            st.write(f"- **{row['date_display']}**: Cambio de {row['analytics_change']:.1f}% en Analytics Consent")
-        st.info("💡 Posibles causas: Actualización del banner, cambios legales, campañas específicas")
-    else:
-        st.success("✅ No se detectaron cambios bruscos en el consentimiento")
-    
-    # Mejor y peor día
-    best_day = df.loc[df['analytics_granted_pct'].idxmax()]
-    worst_day = df.loc[df['analytics_granted_pct'].idxmin()]
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("**📈 Mejor Día:**")
-        st.write(f"- Fecha: {best_day['date_display']}")
-        st.write(f"- Analytics: {best_day['analytics_granted_pct']:.1f}%")
-        st.write(f"- Ads: {best_day['ads_granted_pct']:.1f}%")
-    
-    with col2:
-        st.write("**📉 Peor Día:**")
-        st.write(f"- Fecha: {worst_day['date_display']}")
-        st.write(f"- Analytics: {worst_day['analytics_granted_pct']:.1f}%")
-        st.write(f"- Ads: {worst_day['ads_granted_pct']:.1f}%")
+                st.error("No se pudo generar el análisis. Verifica la API key de Perplexity en secrets.toml.")
 
 def mostrar_consentimiento_por_geografia(df):
     """Visualización para consentimiento por geografía"""
