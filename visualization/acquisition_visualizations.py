@@ -200,9 +200,14 @@ def mostrar_atribucion_marketing(df):
             contexto = "Análisis de atribución de marketing por canal UTM en GA4. Incluye sesiones, conversiones, ingresos y tasas de conversión por fuente y medio."
             resultado = generar_insight_tabla(df, contexto=contexto)
             if resultado:
-                st.markdown(resultado)
+                st.session_state['ia_atribucion_marketing'] = resultado
             else:
+                st.session_state['ia_atribucion_marketing'] = None
                 st.error("No se pudo generar el análisis. Verifica la API key de Perplexity en secrets.toml.")
+
+    # Mostrar resultado persistido
+    if st.session_state.get('ia_atribucion_marketing'):
+        st.markdown(st.session_state['ia_atribucion_marketing'])
 
 def mostrar_atribucion_multimodelo(df):
     """Visualización para análisis de atribución multi-modelo"""
