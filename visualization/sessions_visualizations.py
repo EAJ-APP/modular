@@ -6,7 +6,7 @@ from config.settings import Settings
 
 def mostrar_exit_pages_analysis(df):
     """Visualización para Most Frequent Exit Pages Analysis"""
-    st.subheader(" Análisis de Páginas de Salida")
+    st.subheader("Análisis de Páginas de Salida")
     
     if df.empty:
         st.warning("No hay datos de páginas de salida para el rango seleccionado")
@@ -37,7 +37,7 @@ def mostrar_exit_pages_analysis(df):
     df['exit_page_short'] = df['exit_page_path'].apply(shorten_url)
     
     # Filtro por número mínimo de sesiones
-    st.subheader(" Filtros")
+    st.subheader("Filtros")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -61,11 +61,11 @@ def mostrar_exit_pages_analysis(df):
     df_filtered = df[df['sessions'] >= min_sessions_filter].head(top_n)
     
     if df_filtered.empty:
-        st.warning(" No hay datos con los filtros seleccionados. Reduce el mínimo de sesiones.")
+        st.warning("No hay datos con los filtros seleccionados. Reduce el mínimo de sesiones.")
         return
     
     # Mostrar tabla con datos
-    st.subheader(" Datos Detallados")
+    st.subheader("Datos Detallados")
     
     st.dataframe(
         df_filtered[['exit_page_path', 'sessions', 'exit_percentage']].style.format({
@@ -100,7 +100,7 @@ def mostrar_exit_pages_analysis(df):
     st.plotly_chart(fig_top_exits, use_container_width=True)
     
     # Distribución acumulativa
-    st.subheader(" Análisis de Concentración")
+    st.subheader("Análisis de Concentración")
     
     # Calcular porcentaje acumulativo
     df_sorted = df.sort_values('sessions', ascending=False).reset_index(drop=True)
@@ -153,7 +153,7 @@ def mostrar_exit_pages_analysis(df):
         st.metric("Páginas para 80% salidas", f"{pages_80pct}")
     
     # Distribución de páginas de salida
-    st.subheader(" Distribución de Sesiones")
+    st.subheader("Distribución de Sesiones")
     
     # Crear rangos de sesiones
     df_filtered['session_range'] = pd.cut(
@@ -191,7 +191,7 @@ def mostrar_exit_pages_analysis(df):
         st.plotly_chart(fig_hist, use_container_width=True)
     
     # Análisis de patrones en URLs
-    st.subheader(" Análisis de Patrones de URL")
+    st.subheader("Análisis de Patrones de URL")
     
     # Extraer secciones del sitio (primer nivel de path)
     df_filtered['section'] = df_filtered['exit_page_path'].str.extract(r'^/([^/]+)')[0].fillna('home')
@@ -231,7 +231,7 @@ def mostrar_exit_pages_analysis(df):
         )
     
     # Insights y recomendaciones
-    st.subheader(" Insights Clave")
+    st.subheader("Insights Clave")
     
     # Identificar páginas críticas
     top_exit = df_sorted.iloc[0] if len(df_sorted) > 0 else None
@@ -240,22 +240,22 @@ def mostrar_exit_pages_analysis(df):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write("** Página con Mayor Abandono:**")
+        st.write("**Página con Mayor Abandono:**")
         if top_exit is not None:
             st.write(f"- **Página:** {shorten_url(top_exit['exit_page_path'], 50)}")
             st.write(f"- **Sesiones:** {top_exit['sessions']:,}")
             st.write(f"- **% del Total:** {top_exit['exit_percentage']:.2f}%")
     
     with col2:
-        st.write("** Páginas Críticas (>5% salidas):**")
+        st.write("**Páginas Críticas (>5% salidas):**")
         if not high_exit_pages.empty:
             for _, row in high_exit_pages.iterrows():
                 st.write(f"- {shorten_url(row['exit_page_path'], 40)}: {row['exit_percentage']:.1f}%")
         else:
-            st.write(" No hay páginas individuales con >5% de salidas")
+            st.write("No hay páginas individuales con >5% de salidas")
     
     # Recomendaciones
-    st.subheader(" Recomendaciones")
+    st.subheader("Recomendaciones")
     
     st.info(f"""
     **Plan de Acción para Reducir Abandonos:**
@@ -280,7 +280,7 @@ def mostrar_exit_pages_analysis(df):
     """)
     
     # Comparativa: Páginas de entrada vs salida
-    st.subheader(" Insight Adicional")
+    st.subheader("Insight Adicional")
     
     # Identificar páginas que son tanto entrada como salida
     entrance_keywords = ['home', 'index', 'landing', 'categoria', 'product']
@@ -306,7 +306,7 @@ def mostrar_exit_pages_analysis(df):
             st.write(f"- {shorten_url(row['exit_page_path'], 60)}: {row['sessions']:,} salidas ({row['exit_percentage']:.1f}%)")
     
     # Botón de descarga
-    if st.button(" Descargar Datos CSV", key="download_exit_pages"):
+    if st.button("Descargar Datos CSV", key="download_exit_pages"):
         csv = df.to_csv(index=False)
         st.download_button(
             label="Descargar CSV",
@@ -362,7 +362,7 @@ def mostrar_hourly_sessions_performance(df):
     hourly_avg['hour'] = hourly_avg['hour_int'].apply(lambda x: f'{x:02d}:00')
     
     # Análisis por hora del día
-    st.subheader(" Distribución por Hora del Día")
+    st.subheader("Distribución por Hora del Día")
     
     # Gráfico de líneas - Sesiones y eventos por hora
     fig_hourly = go.Figure()
@@ -415,7 +415,7 @@ def mostrar_hourly_sessions_performance(df):
     st.plotly_chart(fig_hourly, use_container_width=True)
     
     # Heatmap de actividad por hora y día de la semana
-    st.subheader(" Heatmap: Actividad por Día y Hora")
+    st.subheader("Heatmap: Actividad por Día y Hora")
     
     # Preparar datos para heatmap
     heatmap_data = df.pivot_table(
@@ -446,7 +446,7 @@ def mostrar_hourly_sessions_performance(df):
     st.plotly_chart(fig_heatmap, use_container_width=True)
     
     # Análisis de conversión por hora
-    st.subheader(" Tasas de Conversión por Hora")
+    st.subheader("Tasas de Conversión por Hora")
     
     col1, col2 = st.columns(2)
     
@@ -507,7 +507,7 @@ def mostrar_hourly_sessions_performance(df):
         st.plotly_chart(fig_scatter, use_container_width=True)
     
     # Análisis por día de la semana
-    st.subheader(" Análisis por Día de la Semana")
+    st.subheader("Análisis por Día de la Semana")
     
     # Agregar por día de la semana
     weekday_avg = df.groupby('weekday').agg({
@@ -553,7 +553,7 @@ def mostrar_hourly_sessions_performance(df):
         st.plotly_chart(fig_weekday_conv, use_container_width=True)
     
     # Identificar mejores y peores horas
-    st.subheader(" Insights: Mejores y Peores Horas")
+    st.subheader("Insights: Mejores y Peores Horas")
     
     # Top 5 horas por sesiones
     top_hours_sessions = hourly_avg.nlargest(5, 'sessions')
@@ -565,22 +565,22 @@ def mostrar_hourly_sessions_performance(df):
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.write("** Top 5 Horas (Mayor Tráfico):**")
+        st.write("**Top 5 Horas (Mayor Tráfico):**")
         for _, row in top_hours_sessions.iterrows():
             st.write(f"- **{row['hour']}**: {row['sessions']:.0f} sesiones")
     
     with col2:
-        st.write("** Top 5 Horas (Menor Tráfico):**")
+        st.write("**Top 5 Horas (Menor Tráfico):**")
         for _, row in bottom_hours_sessions.iterrows():
             st.write(f"- **{row['hour']}**: {row['sessions']:.0f} sesiones")
     
     with col3:
-        st.write("** Top 5 Horas (Mayor Conversión):**")
+        st.write("**Top 5 Horas (Mayor Conversión):**")
         for _, row in top_hours_conversion.iterrows():
             st.write(f"- **{row['hour']}**: {row['conversion_rate']:.2f}%")
     
     # Tabla detallada
-    st.subheader(" Datos Detallados por Hora")
+    st.subheader("Datos Detallados por Hora")
     
     display_df = hourly_avg[[
         'hour', 'sessions', 'pageviews', 'view_item_sessions', 
@@ -600,7 +600,7 @@ def mostrar_hourly_sessions_performance(df):
     }), use_container_width=True)
     
     # Recomendaciones
-    st.subheader(" Recomendaciones")
+    st.subheader("Recomendaciones")
     
     peak_hour = top_hours_sessions.iloc[0]
     best_conversion_hour = top_hours_conversion.iloc[0]
@@ -615,7 +615,7 @@ def mostrar_hourly_sessions_performance(df):
     """)
     
     # Botón de descarga
-    if st.button(" Descargar Datos CSV", key="download_hourly_performance"):
+    if st.button("Descargar Datos CSV", key="download_hourly_performance"):
         csv = df.to_csv(index=False)
         st.download_button(
             label="Descargar CSV",
@@ -626,7 +626,7 @@ def mostrar_hourly_sessions_performance(df):
 
 def mostrar_session_path_analysis(df):
     """Visualización para Session Path Analysis - CON SANKEY MEJORADO"""
-    st.subheader(" Análisis de Rutas de Navegación")
+    st.subheader("Análisis de Rutas de Navegación")
     
     if df.empty:
         st.warning("No hay datos de rutas de navegación para el rango seleccionado")
@@ -662,7 +662,7 @@ def mostrar_session_path_analysis(df):
     df['full_path'] = df['previous_page_short'] + ' → ' + df['current_page_short'] + ' → ' + df['next_page_short']
     
     # Mostrar tabla con datos
-    st.subheader(" Top Rutas de Navegación")
+    st.subheader("Top Rutas de Navegación")
     
     # Opciones de filtrado
     col1, col2 = st.columns(2)
@@ -705,7 +705,7 @@ def mostrar_session_path_analysis(df):
     )
     
     # Top 20 rutas más comunes
-    st.subheader(" Top 20 Rutas Más Comunes")
+    st.subheader("Top 20 Rutas Más Comunes")
     
     top_paths = df_filtered.nlargest(20, 'session_count')
     
@@ -727,7 +727,7 @@ def mostrar_session_path_analysis(df):
     st.plotly_chart(fig_top_paths, use_container_width=True)
     
     # Análisis de páginas de entrada
-    st.subheader(" Análisis de Páginas de Entrada")
+    st.subheader("Análisis de Páginas de Entrada")
     
     entrance_pages = df[df['previous_page'] == '(entrance)'].groupby('current_page').agg({
         'session_count': 'sum'
@@ -762,7 +762,7 @@ def mostrar_session_path_analysis(df):
         st.plotly_chart(fig_entrance_pie, use_container_width=True)
     
     # Análisis de páginas de salida
-    st.subheader(" Análisis de Páginas de Salida")
+    st.subheader("Análisis de Páginas de Salida")
     
     exit_pages = df[df['next_page'] == '(exit)'].groupby('current_page').agg({
         'session_count': 'sum'
@@ -799,12 +799,12 @@ def mostrar_session_path_analysis(df):
     # ========================================
     # SANKEY DIAGRAM MEJORADO
     # ========================================
-    st.subheader(" Flujo de Navegación (Sankey Diagram)")
+    st.subheader("Flujo de Navegación (Sankey Diagram)")
     
     # Control de número de rutas a mostrar
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.info(" **Tip**: Reduce el número de rutas si el diagrama se ve sobrecargado")
+        st.info("**Tip**: Reduce el número de rutas si el diagrama se ve sobrecargado")
     with col2:
         num_routes = st.selectbox(
             "Rutas a mostrar:",
@@ -910,14 +910,14 @@ def mostrar_session_path_analysis(df):
     # Leyenda de colores
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.markdown(" **Verde**: Páginas de entrada")
+        st.markdown("**Verde**: Páginas de entrada")
     with col2:
-        st.markdown(" **Azul**: Páginas intermedias")
+        st.markdown("**Azul**: Páginas intermedias")
     with col3:
-        st.markdown(" **Rojo**: Páginas de salida")
+        st.markdown("**Rojo**: Páginas de salida")
     
     # Insights clave
-    st.subheader(" Insights Clave")
+    st.subheader("Insights Clave")
     
     # Calcular métricas de insight
     entrance_rate = (df[df['previous_page'] == '(entrance)']['session_count'].sum() / total_sessions * 100)
@@ -929,21 +929,21 @@ def mostrar_session_path_analysis(df):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write("** Páginas de Entrada:**")
+        st.write("**Páginas de Entrada:**")
         st.metric("% de Sesiones que Inician", f"{entrance_rate:.1f}%")
         if top_entrance is not None:
             st.write(f"**Página más común:** {top_entrance['current_page_short']}")
             st.write(f"**Sesiones:** {top_entrance['session_count']:,}")
     
     with col2:
-        st.write("** Páginas de Salida:**")
+        st.write("**Páginas de Salida:**")
         st.metric("% de Sesiones que Terminan", f"{exit_rate:.1f}%")
         if top_exit is not None:
             st.write(f"**Página más común:** {top_exit['current_page_short']}")
             st.write(f"**Sesiones:** {top_exit['session_count']:,}")
     
     # Rutas críticas
-    st.write("** Rutas Críticas para Optimización:**")
+    st.write("**Rutas Críticas para Optimización:**")
     
     # Rutas con alta salida después de página actual
     critical_exits = df[
@@ -957,7 +957,7 @@ def mostrar_session_path_analysis(df):
             st.write(f"- **{shorten_url(row['previous_page'])}** → **{shorten_url(row['current_page'])}** → (salida): {row['session_count']:,} sesiones")
     
     # Botón de descarga
-    if st.button(" Descargar Datos CSV", key="download_session_paths"):
+    if st.button("Descargar Datos CSV", key="download_session_paths"):
         csv = df.to_csv(index=False)
         st.download_button(
             label="Descargar CSV",
@@ -966,9 +966,20 @@ def mostrar_session_path_analysis(df):
             mime="text/csv"
         )
 
+    # Botón de análisis con IA
+    if st.button("Generar análisis con IA", key="btn_ia_session_paths"):
+        from utils.llm_insights import generar_insight_tabla
+        with st.spinner("Generando con LLM (IA)..."):
+            contexto = "Análisis de rutas de navegación de sesiones en GA4. Muestra patrones de navegación incluyendo páginas de entrada, intermedias y salida, con conteo de sesiones por ruta."
+            resultado = generar_insight_tabla(df_filtered.head(50), contexto=contexto)
+            if resultado:
+                st.markdown(resultado)
+            else:
+                st.error("No se pudo generar el análisis. Verifica la API key de Perplexity en secrets.toml.")
+
 def mostrar_low_converting_sessions(df):
     """Visualización para Low Converting Sessions Analysis"""
-    st.subheader(" Análisis de Sesiones con Baja Conversión")
+    st.subheader("Análisis de Sesiones con Baja Conversión")
     
     if df.empty:
         st.warning("No hay datos de sesiones sin conversión para el rango seleccionado")
@@ -992,7 +1003,7 @@ def mostrar_low_converting_sessions(df):
         st.metric("Tasa Bounce Media", f"{avg_bounce:.1f}%")
     
     # Mostrar tabla con datos
-    st.subheader(" Datos Detallados")
+    st.subheader("Datos Detallados")
     
     # Crear columnas seleccionables para mostrar
     columnas_mostrar = st.multiselect(
@@ -1016,7 +1027,7 @@ def mostrar_low_converting_sessions(df):
         }))
     
     # Análisis por fuente de tráfico
-    st.subheader(" Análisis por Fuente de Tráfico")
+    st.subheader("Análisis por Fuente de Tráfico")
     
     traffic_analysis = df.groupby(['session_source', 'session_medium']).agg({
         'total_non_converting_sessions': 'sum',
@@ -1065,7 +1076,7 @@ def mostrar_low_converting_sessions(df):
         st.plotly_chart(fig_scatter, use_container_width=True)
     
     # Análisis por dispositivo
-    st.subheader(" Análisis por Dispositivo")
+    st.subheader("Análisis por Dispositivo")
     
     device_analysis = df.groupby('device_category').agg({
         'total_non_converting_sessions': 'sum',
@@ -1117,7 +1128,7 @@ def mostrar_low_converting_sessions(df):
         st.plotly_chart(fig_device_metrics, use_container_width=True)
     
     # Análisis de Landing Pages problemáticas
-    st.subheader(" Landing Pages con Mayor Tasa de No Conversión")
+    st.subheader("Landing Pages con Mayor Tasa de No Conversión")
     
     landing_analysis = df.groupby('landing_page').agg({
         'total_non_converting_sessions': 'sum',
@@ -1150,7 +1161,7 @@ def mostrar_low_converting_sessions(df):
     st.plotly_chart(fig_landing, use_container_width=True)
     
     # Análisis geográfico
-    st.subheader(" Análisis Geográfico")
+    st.subheader("Análisis Geográfico")
     
     geo_analysis = df.groupby(['country', 'city']).agg({
         'total_non_converting_sessions': 'sum',
@@ -1191,7 +1202,7 @@ def mostrar_low_converting_sessions(df):
         }))
     
     # Insights y recomendaciones
-    st.subheader(" Insights Clave")
+    st.subheader("Insights Clave")
     
     # Identificar problemas
     high_bounce = df[df['pct_bounced_sessions'] > 70].nlargest(5, 'total_non_converting_sessions')
@@ -1200,23 +1211,23 @@ def mostrar_low_converting_sessions(df):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write("** Fuentes con Mayor Bounce Rate (>70%):**")
+        st.write("**Fuentes con Mayor Bounce Rate (>70%):**")
         if not high_bounce.empty:
             for _, row in high_bounce.iterrows():
                 st.write(f"- **{row['session_source']}** / {row['session_medium']}: {row['pct_bounced_sessions']:.1f}% bounce ({row['total_non_converting_sessions']:,} sesiones)")
         else:
-            st.write(" No hay fuentes con bounce rate crítico")
+            st.write("No hay fuentes con bounce rate crítico")
     
     with col2:
-        st.write("**⏱ Fuentes con Bajo Engagement (>70%):**")
+        st.write("**Fuentes con Bajo Engagement (>70%):**")
         if not low_engagement.empty:
             for _, row in low_engagement.iterrows():
                 st.write(f"- **{row['session_source']}** / {row['session_medium']}: {row['pct_low_engagement']:.1f}% bajo engagement")
         else:
-            st.write(" No hay fuentes con engagement crítico")
+            st.write("No hay fuentes con engagement crítico")
     
     # Botón de descarga
-    if st.button(" Descargar Datos CSV", key="download_low_converting"):
+    if st.button("Descargar Datos CSV", key="download_low_converting"):
         csv = df.to_csv(index=False)
         st.download_button(
             label="Descargar CSV",

@@ -7,7 +7,7 @@ from utils.helpers import safe_divide
 
 def mostrar_comparativa_eventos(df):
     """Visualización para comparativa completa de eventos (con funnel como antes)"""
-    st.subheader(" Funnel de Ecommerce")
+    st.subheader("Funnel de Ecommerce")
     
     if df.empty:
         st.warning("No hay datos disponibles para el rango seleccionado")
@@ -99,7 +99,7 @@ def mostrar_comparativa_eventos(df):
 
 def mostrar_ingresos_transacciones(df):
     """Visualización SIMPLIFICADA para ingresos y transacciones"""
-    st.subheader(" Ingresos y Transacciones")
+    st.subheader("Ingresos y Transacciones")
     
     if df.empty:
         st.warning("No hay datos de transacciones para el rango seleccionado")
@@ -137,7 +137,7 @@ def mostrar_ingresos_transacciones(df):
 
 def mostrar_productos_mas_vendidos(df):
     """Performance de productos por ingresos (CON NOMBRE)"""
-    st.subheader(" Productos Más Vendidos por Ingresos")
+    st.subheader("Productos Más Vendidos por Ingresos")
     
     if df.empty:
         st.warning("No hay datos de productos vendidos para el rango seleccionado")
@@ -202,9 +202,20 @@ def mostrar_productos_mas_vendidos(df):
     
     st.plotly_chart(fig_scatter, use_container_width=True)
 
+    # Botón de análisis con IA
+    if st.button("Generar análisis con IA", key="btn_ia_productos_vendidos"):
+        from utils.llm_insights import generar_insight_tabla
+        with st.spinner("Generando con LLM (IA)..."):
+            contexto = "Análisis de productos más vendidos por ingresos en ecommerce GA4. Incluye ranking de productos, cantidad vendida y revenue generado."
+            resultado = generar_insight_tabla(df, contexto=contexto)
+            if resultado:
+                st.markdown(resultado)
+            else:
+                st.error("No se pudo generar el análisis. Verifica la API key de Perplexity en secrets.toml.")
+
 def mostrar_relacion_productos(df):
     """Relación ID vs Nombre de productos"""
-    st.subheader(" Relación ID vs Nombre de Productos")
+    st.subheader("Relación ID vs Nombre de Productos")
     
     if df.empty:
         st.warning("No hay datos de productos para el rango seleccionado")
@@ -233,7 +244,7 @@ def mostrar_relacion_productos(df):
     
     # Resumen de ineficiencias
     if not df_ineficiencias.empty:
-        st.warning(" **Se detectaron posibles ineficiencias:**")
+        st.warning("**Se detectaron posibles ineficiencias:**")
         
         # Productos con múltiples nombres
         productos_multi_nombre = df_ineficiencias[df_ineficiencias['nombres_por_producto'] > 1]
@@ -256,11 +267,11 @@ def mostrar_relacion_productos(df):
         with col2:
             st.metric("% de ineficiencia", f"{(len(df_ineficiencias) / len(df) * 100):.1f}%")
     else:
-        st.success(" No se detectaron ineficiencias en la relación ID vs Nombre")
+        st.success("No se detectaron ineficiencias en la relación ID vs Nombre")
 
 def mostrar_funnel_por_producto(df):
     """Funnel de conversión por producto"""
-    st.subheader(" Funnel de Conversión por Producto")
+    st.subheader("Funnel de Conversión por Producto")
     
     if df.empty:
         st.warning("No hay datos de funnel por producto para el rango seleccionado")
@@ -342,7 +353,7 @@ def mostrar_funnel_por_producto(df):
     st.plotly_chart(fig_heatmap, use_container_width=True)
     
     # Análisis de mejores conversores
-    st.subheader(" Productos con Mejor Conversión")
+    st.subheader("Productos con Mejor Conversión")
     
     # Producto con mejor tasa de compra
     best_converter = df.loc[df['purchase_rate'].idxmax()] if not df.empty else None
@@ -357,7 +368,7 @@ def mostrar_funnel_por_producto(df):
 
 def mostrar_combos_cross_selling(df):
     """Visualización para análisis de combos y cross-selling"""
-    st.subheader(" Análisis de Combos y Cross-Selling")
+    st.subheader("Análisis de Combos y Cross-Selling")
     
     if df.empty:
         st.warning("No hay datos de combos para el rango seleccionado")
@@ -370,7 +381,7 @@ def mostrar_combos_cross_selling(df):
     )
     
     # Información educativa sobre Market Basket Analysis
-    with st.expander(" ¿Qué es Market Basket Analysis?", expanded=False):
+    with st.expander("¿Qué es Market Basket Analysis?", expanded=False):
         st.markdown("""
         **Market Basket Analysis** identifica productos que frecuentemente se compran juntos.
         
@@ -415,7 +426,7 @@ def mostrar_combos_cross_selling(df):
             st.metric("Mejor Combo Score", f"{best_combo['combo_strength_score']:.1f}")
     
     # Filtros interactivos
-    st.subheader(" Filtros")
+    st.subheader("Filtros")
     
     col1, col2, col3 = st.columns(3)
     
@@ -459,13 +470,13 @@ def mostrar_combos_cross_selling(df):
     ].copy()
     
     if df_filtered.empty:
-        st.warning(" No hay combos que cumplan los filtros. Intenta reducir los valores.")
+        st.warning("No hay combos que cumplan los filtros. Intenta reducir los valores.")
         return
     
-    st.info(f" Mostrando **{len(df_filtered)}** combos que cumplen los filtros")
+    st.info(f"Mostrando **{len(df_filtered)}** combos que cumplen los filtros")
     
     # Top 20 combos por Strength Score
-    st.subheader(" Top 20 Combos Más Fuertes")
+    st.subheader("Top 20 Combos Más Fuertes")
     
     top_combos = df_filtered.head(20).copy()
     
@@ -495,7 +506,7 @@ def mostrar_combos_cross_selling(df):
     st.plotly_chart(fig_top_combos, use_container_width=True)
     
     # Scatter Plot: Lift vs Confidence
-    st.subheader(" Matriz: Frecuencia vs Valor del Carrito")
+    st.subheader("Matriz: Frecuencia vs Valor del Carrito")
     
     fig_scatter = px.scatter(
         df_filtered.head(100),
@@ -543,7 +554,7 @@ def mostrar_combos_cross_selling(df):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write("** Combos ESTRELLA (Alta freq + Alto valor):**")
+        st.write("**Combos ESTRELLA (Alta freq + Alto valor):**")
         star_combos = df_filtered[
             (df_filtered['times_bought_together'] > median_freq) &
             (df_filtered['avg_basket_value'] > median_value)
@@ -557,7 +568,7 @@ def mostrar_combos_cross_selling(df):
             st.write("No hay combos en esta categoría con los filtros actuales")
     
     with col2:
-        st.write("** Combos PREMIUM (Bajo volumen + Alto valor):**")
+        st.write("**Combos PREMIUM (Bajo volumen + Alto valor):**")
         premium_combos = df_filtered[
             (df_filtered['times_bought_together'] <= median_freq) &
             (df_filtered['avg_basket_value'] > median_value)
@@ -567,12 +578,12 @@ def mostrar_combos_cross_selling(df):
             for _, row in premium_combos.iterrows():
                 st.write(f"- **{row['product_a']}** + **{row['product_b']}**")
                 st.write(f" Comprados juntos: {row['times_bought_together']} veces | Valor: €{row['avg_basket_value']:.2f}")
-            st.info(" Productos premium con menor frecuencia pero alto valor.")
+            st.info("Productos premium con menor frecuencia pero alto valor.")
         else:
             st.write("No hay combos en esta categoría con los filtros actuales")
     
     # Análisis por valor de basket
-    st.subheader(" Análisis por Valor de Basket")
+    st.subheader("Análisis por Valor de Basket")
     
     col1, col2 = st.columns(2)
     
@@ -617,7 +628,7 @@ def mostrar_combos_cross_selling(df):
         st.plotly_chart(fig_freq, use_container_width=True)
     
     # Análisis por dispositivo
-    st.subheader(" Análisis por Dispositivo")
+    st.subheader("Análisis por Dispositivo")
     
     # Calcular totales
     total_desktop = df_filtered['desktop_purchases'].sum()
@@ -652,7 +663,7 @@ def mostrar_combos_cross_selling(df):
         st.info("No hay datos de dispositivo disponibles")
     
     # Top productos en combos
-    st.subheader(" Productos Más Presentes en Combos")
+    st.subheader("Productos Más Presentes en Combos")
     
     # Contar apariciones de cada producto
     product_counts = {}
@@ -688,7 +699,7 @@ def mostrar_combos_cross_selling(df):
         """)
     
     # Tabla detallada de combos
-    st.subheader(" Tabla Detallada de Combos")
+    st.subheader("Tabla Detallada de Combos")
     
     display_df = df_filtered.head(50)[[
         'product_a', 'product_b', 'times_bought_together',
@@ -702,7 +713,7 @@ def mostrar_combos_cross_selling(df):
     }), height=600)
     
     # Recomendaciones accionables
-    st.subheader(" Recomendaciones Accionables")
+    st.subheader("Recomendaciones Accionables")
     
     # Identificar mejores oportunidades
     best_bundles = df_filtered.nlargest(5, 'combo_strength_score')
@@ -746,7 +757,7 @@ def mostrar_combos_cross_selling(df):
         """)
     
     # Estimación de impacto
-    st.subheader(" Estimación de Impacto")
+    st.subheader("Estimación de Impacto")
     
     top_10_combos = df_filtered.head(10)
     
@@ -775,7 +786,7 @@ def mostrar_combos_cross_selling(df):
     """)
     
     # Exportar datos
-    st.subheader(" Exportar Datos")
+    st.subheader("Exportar Datos")
     
     col1, col2 = st.columns(2)
     
@@ -783,7 +794,7 @@ def mostrar_combos_cross_selling(df):
         # CSV completo
         csv_full = df_filtered.to_csv(index=False)
         st.download_button(
-            label=" Descargar Todos los Combos (CSV)",
+            label="Descargar Todos los Combos (CSV)",
             data=csv_full,
             file_name="combos_cross_selling_completo.csv",
             mime="text/csv",
@@ -794,7 +805,7 @@ def mostrar_combos_cross_selling(df):
         # CSV top combos
         csv_top = df_filtered.head(20).to_csv(index=False)
         st.download_button(
-            label="⭐ Descargar Top 20 Combos (CSV)",
+            label="Descargar Top 20 Combos (CSV)",
             data=csv_top,
             file_name="combos_top_20.csv",
             mime="text/csv",

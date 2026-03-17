@@ -7,7 +7,7 @@ from utils.helpers import safe_divide
 
 def mostrar_canales_trafico(df):
     """Visualización para análisis de canales de tráfico"""
-    st.subheader(" Distribución de Canales de Tráfico")
+    st.subheader("Distribución de Canales de Tráfico")
     
     if df.empty:
         st.warning("No hay datos de tráfico para el rango seleccionado")
@@ -60,7 +60,7 @@ def mostrar_canales_trafico(df):
     st.plotly_chart(fig_bar, use_container_width=True)
     
     # Análisis de concentración
-    st.subheader(" Análisis de Concentración")
+    st.subheader("Análisis de Concentración")
     
     # Calcular concentración (Top 5 canales)
     top_5_percentage = df.head(5)['traffic_percentage'].sum()
@@ -75,13 +75,13 @@ def mostrar_canales_trafico(df):
     # Detectar canales emergentes (menos del 1% pero presentes)
     emerging_channels = df[df['traffic_percentage'] < 1.0]
     if not emerging_channels.empty:
-        st.info(" **Canales Emergentes** (menos del 1% pero con potencial):")
+        st.info("**Canales Emergentes** (menos del 1% pero con potencial):")
         for _, channel in emerging_channels.iterrows():
             st.write(f"- **{channel['traffic_channel']}**: {channel['session_count']} sesiones ({channel['traffic_percentage']}%)")
 
 def mostrar_atribucion_marketing(df):
     """Visualización para análisis de atribución de marketing"""
-    st.subheader(" Atribución de Marketing por Canal UTM")
+    st.subheader("Atribución de Marketing por Canal UTM")
     
     if df.empty:
         st.warning("No hay datos de atribución para el rango seleccionado")
@@ -112,7 +112,7 @@ def mostrar_atribucion_marketing(df):
     }))
     
     # Análisis por medio
-    st.subheader(" Análisis por Medio de Marketing")
+    st.subheader("Análisis por Medio de Marketing")
     
     medios_df = df.groupby('utm_medium').agg({
         'sessions': 'sum',
@@ -152,7 +152,7 @@ def mostrar_atribucion_marketing(df):
         st.plotly_chart(fig_conversion, use_container_width=True)
     
     # Top campañas por ROI
-    st.subheader(" Top Campañas por Performance")
+    st.subheader("Top Campañas por Performance")
     
     top_campanas = df.nlargest(10, 'revenue')
     
@@ -175,7 +175,7 @@ def mostrar_atribucion_marketing(df):
     st.plotly_chart(fig_campanas, use_container_width=True)
     
     # Análisis de eficiencia
-    st.subheader(" Eficiencia de Canales")
+    st.subheader("Eficiencia de Canales")
     
     # Calcular ROI aproximado (ingresos por sesión)
     df['revenue_per_session'] = (df['revenue'] / df['sessions']).round(2)
@@ -193,16 +193,27 @@ def mostrar_atribucion_marketing(df):
     fig_eficiencia.update_layout(xaxis_tickangle=-45)
     st.plotly_chart(fig_eficiencia, use_container_width=True)
 
+    # Botón de análisis con IA
+    if st.button("Generar análisis con IA", key="btn_ia_atribucion_marketing"):
+        from utils.llm_insights import generar_insight_tabla
+        with st.spinner("Generando con LLM (IA)..."):
+            contexto = "Análisis de atribución de marketing por canal UTM en GA4. Incluye sesiones, conversiones, ingresos y tasas de conversión por fuente y medio."
+            resultado = generar_insight_tabla(df, contexto=contexto)
+            if resultado:
+                st.markdown(resultado)
+            else:
+                st.error("No se pudo generar el análisis. Verifica la API key de Perplexity en secrets.toml.")
+
 def mostrar_atribucion_multimodelo(df):
     """Visualización para análisis de atribución multi-modelo"""
-    st.subheader(" Atribución Multi-Modelo")
+    st.subheader("Atribución Multi-Modelo")
     
     if df.empty:
         st.warning("No hay datos de atribución multi-modelo para el rango seleccionado")
         return
     
     # Mostrar resumen por modelo
-    st.subheader(" Resumen por Modelo de Atribución")
+    st.subheader("Resumen por Modelo de Atribución")
     
     model_summary = df.groupby('attribution_model').agg({
         'sessions': 'sum',
@@ -228,7 +239,7 @@ def mostrar_atribucion_multimodelo(df):
         st.metric("Modelos Analizados", f"{models_count}")
     
     # Gráfico comparativo entre modelos
-    st.subheader(" Comparativa entre Modelos")
+    st.subheader("Comparativa entre Modelos")
     
     fig_comparison = px.bar(
         model_summary,
@@ -242,7 +253,7 @@ def mostrar_atribucion_multimodelo(df):
     st.plotly_chart(fig_comparison, use_container_width=True)
     
     # Análisis detallado por modelo
-    st.subheader(" Análisis Detallado por Modelo")
+    st.subheader("Análisis Detallado por Modelo")
     
     for model in df['attribution_model'].unique():
         with st.expander(f"Modelo: {model}", expanded=False):
@@ -291,7 +302,7 @@ def mostrar_atribucion_multimodelo(df):
             }))
     
     # Análisis de diferencias entre modelos
-    st.subheader(" Diferencias entre Modelos")
+    st.subheader("Diferencias entre Modelos")
     
     # Pivot para comparar modelos
     pivot_df = df.pivot_table(
@@ -319,28 +330,28 @@ def mostrar_atribucion_multimodelo(df):
 
 def mostrar_atribucion_completa(df):
     """Visualización para análisis de atribución completa (7 modelos)"""
-    st.subheader(" Atribución Multi-Modelo Completa (7 Modelos)")
+    st.subheader("Atribución Multi-Modelo Completa (7 Modelos)")
     
     if df.empty:
         st.warning("No hay datos de atribución completa para el rango seleccionado")
         return
     
     # Información sobre los modelos
-    with st.expander(" Información sobre los Modelos de Atribución", expanded=False):
+    with st.expander("Información sobre los Modelos de Atribución", expanded=False):
         st.markdown("""
         **7 Modelos Implementados:**
-        
-        - ** Last Click**: Atribuye el 100% al último touchpoint antes de la conversión
-        - ** First Click**: Atribuye el 100% al primer touchpoint del usuario
-        - ** Linear**: Distribuye equitativamente entre todos los touchpoints
-        - **⏰ Time Decay**: Mayor peso a los touchpoints más recientes
-        - ** Position Based**: 40% primer click, 40% último click, 20% intermedios
-        - ** Last Non-Direct**: Como Last Click pero ignora tráfico directo
-        - ** Data Driven**: Combinación algorítmica de múltiples factores
+
+        - **Last Click**: Atribuye el 100% al ultimo touchpoint antes de la conversion
+        - **First Click**: Atribuye el 100% al primer touchpoint del usuario
+        - **Linear**: Distribuye equitativamente entre todos los touchpoints
+        - **Time Decay**: Mayor peso a los touchpoints mas recientes
+        - **Position Based**: 40% primer click, 40% ultimo click, 20% intermedios
+        - **Last Non-Direct**: Como Last Click pero ignora trafico directo
+        - **Data Driven**: Combinacion algoritmica de multiples factores
         """)
     
     # Resumen ejecutivo
-    st.subheader(" Resumen Ejecutivo")
+    st.subheader("Resumen Ejecutivo")
     
     total_models = df['attribution_model'].nunique()
     total_channels = df['utm_source'].nunique()
@@ -368,7 +379,7 @@ def mostrar_atribucion_completa(df):
     st.write(f"**Modelos analizados:** {', '.join(df['attribution_model'].unique())}")
     
     # Comparativa entre modelos
-    st.subheader(" Comparativa entre Modelos")
+    st.subheader("Comparativa entre Modelos")
     
     model_comparison = df.groupby('attribution_model').agg({
         'attributed_revenue': 'sum',
@@ -406,7 +417,7 @@ def mostrar_atribucion_completa(df):
         st.plotly_chart(fig_conversions, use_container_width=True)
     
     # Análisis de diferencias entre modelos
-    st.subheader(" Análisis de Diferencias entre Modelos")
+    st.subheader("Análisis de Diferencias entre Modelos")
     
     # Pivot para comparación
     pivot_data = df.pivot_table(
@@ -431,7 +442,7 @@ def mostrar_atribucion_completa(df):
         }))
     
     # SOLUCIÓN DEFINITIVA: Usar on_change callback en lugar de monitorear cambios
-    st.subheader(" Análisis Detallado por Modelo")
+    st.subheader("Análisis Detallado por Modelo")
     
     # Key único para el selectbox de esta función
     selectbox_key = 'attribution_complete_model_selector'
@@ -504,7 +515,7 @@ def mostrar_atribucion_completa(df):
             st.warning(f"No hay datos para el modelo {selected_model}")
     
     # Análisis por dispositivo
-    st.subheader(" Análisis por Dispositivo")
+    st.subheader("Análisis por Dispositivo")
     
     device_analysis = df.groupby(['attribution_model', 'device_type']).agg({
         'attributed_revenue': 'sum',

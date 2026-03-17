@@ -6,7 +6,7 @@ from config.settings import Settings
 
 def mostrar_consentimiento_basico(df):
     """Visualización para consulta básica de consentimiento con porcentajes"""
-    st.subheader(" Datos Crudos")
+    st.subheader("Datos Crudos")
     
     # Calcular totales para porcentajes
     total_eventos = df['total_events'].sum()
@@ -46,7 +46,7 @@ def mostrar_consentimiento_basico(df):
 
 def mostrar_consentimiento_por_dispositivo(df):
     """Visualización corregida que muestra datos diferentes en cada pestaña"""
-    st.subheader(" Consentimiento por Dispositivo (Detallado)")
+    st.subheader("Consentimiento por Dispositivo (Detallado)")
     
     if df.empty:
         st.warning("No hay datos disponibles para el rango seleccionado")
@@ -112,7 +112,7 @@ def mostrar_consentimiento_por_dispositivo(df):
         st.dataframe(df_ads_grouped.pivot(index='device_type', columns='consent_status', values='total_events'))
     
     # Estadísticas comparativas
-    st.subheader(" Comparativa de Consentimientos")
+    st.subheader("Comparativa de Consentimientos")
     col1, col2 = st.columns(2)
     
     with col1:
@@ -125,7 +125,7 @@ def mostrar_consentimiento_por_dispositivo(df):
 
 def mostrar_consentimiento_real(df):
     """Nueva visualización para porcentaje real de consentimiento"""
-    st.subheader(" Porcentaje Real de Consentimiento (Todos los Eventos)")
+    st.subheader("Porcentaje Real de Consentimiento (Todos los Eventos)")
     
     # Mapeo de estados a colores
     status_colors = {
@@ -151,11 +151,11 @@ def mostrar_consentimiento_real(df):
     
     # Calcular y mostrar el % de eventos SIN consentimiento (Denegado + No Definido)
     denied_pct = df[df['consent_status'].isin(['Denegado', 'No Definido'])]['event_percentage'].sum()
-    st.metric(" Eventos sin consentimiento (Real)", f"{denied_pct:.2f}%")
+    st.metric("Eventos sin consentimiento (Real)", f"{denied_pct:.2f}%")
 
 def mostrar_evolucion_temporal_consentimiento(df):
     """Visualización para evolución temporal del consentimiento"""
-    st.subheader(" Evolución Temporal del Consentimiento")
+    st.subheader("Evolución Temporal del Consentimiento")
     
     if df.empty:
         st.warning("No hay datos de evolución temporal para el rango seleccionado")
@@ -188,7 +188,7 @@ def mostrar_evolucion_temporal_consentimiento(df):
                  delta_color="normal" if trend >= 0 else "inverse")
     
     # Gráfico principal: Evolución de tasas de consentimiento
-    st.subheader(" Tasas de Consentimiento por Día")
+    st.subheader("Tasas de Consentimiento por Día")
     
     fig_evolution = go.Figure()
     
@@ -238,7 +238,7 @@ def mostrar_evolucion_temporal_consentimiento(df):
     st.plotly_chart(fig_evolution, use_container_width=True)
     
     # Gráfico secundario: Volumen de eventos
-    st.subheader(" Volumen de Eventos por Día")
+    st.subheader("Volumen de Eventos por Día")
     
     col1, col2 = st.columns(2)
     
@@ -270,7 +270,7 @@ def mostrar_evolucion_temporal_consentimiento(df):
         st.plotly_chart(fig_users, use_container_width=True)
     
     # Análisis comparativo: Analytics vs Ads
-    st.subheader(" Comparativa: Analytics vs Ads Storage")
+    st.subheader("Comparativa: Analytics vs Ads Storage")
     
     # Calcular diferencia
     df['consent_gap'] = df['analytics_granted_pct'] - df['ads_granted_pct']
@@ -313,16 +313,16 @@ def mostrar_evolucion_temporal_consentimiento(df):
     with col2:
         st.write("**Interpretación de la brecha:**")
         if avg_gap > 5:
-            st.success(f" Los usuarios aceptan más **Analytics** que **Ads** (+{avg_gap:.1f}%)")
-            st.info(" Esto es típico: los usuarios confían más en analytics que en publicidad")
+            st.success(f"Los usuarios aceptan más **Analytics** que **Ads** (+{avg_gap:.1f}%)")
+            st.info("Esto es típico: los usuarios confían más en analytics que en publicidad")
         elif avg_gap < -5:
-            st.warning(f" Los usuarios aceptan más **Ads** que **Analytics** ({avg_gap:.1f}%)")
-            st.info(" Esto es inusual. Verifica la configuración del banner")
+            st.warning(f"Los usuarios aceptan más **Ads** que **Analytics** ({avg_gap:.1f}%)")
+            st.info("Esto es inusual. Verifica la configuración del banner")
         else:
-            st.info(f" Ambas tasas son similares (diferencia: {avg_gap:.1f}%)")
+            st.info(f"Ambas tasas son similares (diferencia: {avg_gap:.1f}%)")
     
     # Tabla de datos detallada
-    st.subheader(" Datos Detallados")
+    st.subheader("Datos Detallados")
     
     display_df = df[[
         'date_display', 'total_events', 'unique_users', 'unique_sessions',
@@ -345,7 +345,7 @@ def mostrar_evolucion_temporal_consentimiento(df):
     }), height=400)
 
     # Botón de análisis con IA
-    if st.button(" Generar análisis con IA", key="btn_ia_evolucion"):
+    if st.button("Generar análisis con IA", key="btn_ia_evolucion"):
         from utils.llm_insights import generar_insight_tabla
         with st.spinner("Generando con LLM (IA)..."):
             resultado = generar_insight_tabla(
@@ -364,7 +364,7 @@ def mostrar_evolucion_temporal_consentimiento(df):
 
 def mostrar_consentimiento_por_geografia(df):
     """Visualización para consentimiento por geografía"""
-    st.subheader(" Consentimiento por Geografía")
+    st.subheader("Consentimiento por Geografía")
     
     if df.empty:
         st.warning("No hay datos geográficos para el rango seleccionado")
@@ -387,7 +387,7 @@ def mostrar_consentimiento_por_geografia(df):
         st.metric("País con Mayor Consent", best_country)
     
     # Análisis por país
-    st.subheader(" Análisis por País")
+    st.subheader("Análisis por País")
     
     country_stats = df.groupby('country').agg({
         'total_events': 'sum',
@@ -440,7 +440,7 @@ def mostrar_consentimiento_por_geografia(df):
         st.plotly_chart(fig_scatter, use_container_width=True)
     
     # Heatmap de consentimiento por país
-    st.subheader(" Comparativa: Analytics vs Ads por País")
+    st.subheader("Comparativa: Analytics vs Ads por País")
     
     # Preparar datos para heatmap (Top 15 países)
     heatmap_data = top_countries.head(15)[['country', 'analytics_consent_rate', 'ads_consent_rate']].set_index('country')
@@ -458,7 +458,7 @@ def mostrar_consentimiento_por_geografia(df):
     st.plotly_chart(fig_heatmap, use_container_width=True)
     
     # Análisis por continente
-    st.subheader(" Análisis por Continente")
+    st.subheader("Análisis por Continente")
     
     continent_stats = df.groupby('continent').agg({
         'total_events': 'sum',
@@ -510,7 +510,7 @@ def mostrar_consentimiento_por_geografia(df):
         st.plotly_chart(fig_continent_bars, use_container_width=True)
     
     # Análisis por ciudad (Top 20)
-    st.subheader(" Top 20 Ciudades")
+    st.subheader("Top 20 Ciudades")
     
     city_stats = df.groupby(['country', 'city']).agg({
         'total_events': 'sum',
@@ -539,7 +539,7 @@ def mostrar_consentimiento_por_geografia(df):
     st.plotly_chart(fig_cities, use_container_width=True)
     
     # Tabla detallada de países
-    st.subheader(" Datos Detallados por País")
+    st.subheader("Datos Detallados por País")
     
     display_df = country_stats.head(30)[[
         'country', 'total_events', 'unique_users',
@@ -557,7 +557,7 @@ def mostrar_consentimiento_por_geografia(df):
     }), height=400)
     
     # Insights geográficos
-    st.subheader(" Insights Geográficos")
+    st.subheader("Insights Geográficos")
     
     # Países con mayor y menor consentimiento
     best_consent_countries = country_stats.nlargest(5, 'full_consent_rate')
@@ -566,12 +566,12 @@ def mostrar_consentimiento_por_geografia(df):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write("** Países con Mayor Consentimiento:**")
+        st.write("**Países con Mayor Consentimiento:**")
         for _, row in best_consent_countries.iterrows():
             st.write(f"- **{row['country']}**: {row['full_consent_rate']:.1f}% ({row['unique_users']:,} usuarios)")
     
     with col2:
-        st.write("** Países con Menor Consentimiento:**")
+        st.write("**Países con Menor Consentimiento:**")
         for _, row in worst_consent_countries.iterrows():
             st.write(f"- **{row['country']}**: {row['full_consent_rate']:.1f}% ({row['unique_users']:,} usuarios)")
     
@@ -585,7 +585,7 @@ def mostrar_consentimiento_por_geografia(df):
     """)
     
     # Estadísticas de compliance
-    st.subheader(" Estadísticas de Compliance")
+    st.subheader("Estadísticas de Compliance")
     
     # Países con regulación estricta (EU + UK + California aproximado)
     strict_countries = ['Spain', 'France', 'Germany', 'Italy', 'United Kingdom', 
@@ -610,12 +610,12 @@ def mostrar_consentimiento_por_geografia(df):
             st.metric("Diferencia", f"{difference:+.1f}%")
         
         if difference > 10:
-            st.warning(f" Los países regulados tienen **{difference:.1f}%** menos consentimiento que otros países")
-            st.info(" **Recomendación**: Optimiza el banner de cookies específicamente para estos mercados")
+            st.warning(f"Los países regulados tienen **{difference:.1f}%** menos consentimiento que otros países")
+            st.info("**Recomendación**: Optimiza el banner de cookies específicamente para estos mercados")
 
 def mostrar_consentimiento_por_fuente_trafico(df):
     """Visualización para consentimiento por fuente de tráfico"""
-    st.subheader(" Consentimiento por Fuente de Tráfico")
+    st.subheader("Consentimiento por Fuente de Tráfico")
     
     if df.empty:
         st.warning("No hay datos de consentimiento por fuente de tráfico")
@@ -638,7 +638,7 @@ def mostrar_consentimiento_por_fuente_trafico(df):
         st.metric("Consentimiento Completo", f"{avg_full_consent:.1f}%")
     
     # Análisis por Channel Group
-    st.subheader(" Consentimiento por Channel Group")
+    st.subheader("Consentimiento por Channel Group")
     
     channel_stats = df.groupby('channel_group').agg({
         'total_events': 'sum',
@@ -705,7 +705,7 @@ def mostrar_consentimiento_por_fuente_trafico(df):
         st.plotly_chart(fig_channel_bars, use_container_width=True)
     
     # Scatter: Volumen vs Consent Rate
-    st.subheader(" Volumen vs Calidad de Consentimiento")
+    st.subheader("Volumen vs Calidad de Consentimiento")
     
     fig_scatter = px.scatter(
         channel_stats,
@@ -727,7 +727,7 @@ def mostrar_consentimiento_por_fuente_trafico(df):
     st.plotly_chart(fig_scatter, use_container_width=True)
     
     # Top fuentes específicas
-    st.subheader(" Top Fuentes de Tráfico")
+    st.subheader("Top Fuentes de Tráfico")
     
     # Filtros
     col1, col2 = st.columns(2)
@@ -792,7 +792,7 @@ def mostrar_consentimiento_por_fuente_trafico(df):
         st.warning("No hay fuentes que cumplan los filtros seleccionados")
     
     # Análisis por medio (utm_medium)
-    st.subheader(" Análisis por Medio de Adquisición")
+    st.subheader("Análisis por Medio de Adquisición")
     
     medium_stats = df.groupby('utm_medium').agg({
         'total_events': 'sum',
@@ -831,7 +831,7 @@ def mostrar_consentimiento_por_fuente_trafico(df):
         st.plotly_chart(fig_medium_consent, use_container_width=True)
     
     # Tabla detallada
-    st.subheader(" Datos Detallados")
+    st.subheader("Datos Detallados")
     
     display_df = df_filtered.head(50)[[
         'channel_group', 'utm_source', 'utm_medium', 'utm_campaign',
@@ -850,7 +850,7 @@ def mostrar_consentimiento_por_fuente_trafico(df):
     }), height=400)
     
     # Insights de marketing
-    st.subheader(" Insights de Marketing")
+    st.subheader("Insights de Marketing")
     
     # Identificar mejores y peores canales
     best_channels = channel_stats.nlargest(3, 'full_consent_rate')
@@ -859,19 +859,19 @@ def mostrar_consentimiento_por_fuente_trafico(df):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write("** Canales con Mayor Consentimiento:**")
+        st.write("**Canales con Mayor Consentimiento:**")
         for _, row in best_channels.iterrows():
             st.write(f"- **{row['channel_group']}**: {row['full_consent_rate']:.1f}%")
             st.write(f" ({row['unique_users']:,} usuarios)")
     
     with col2:
-        st.write("** Canales con Menor Consentimiento:**")
+        st.write("**Canales con Menor Consentimiento:**")
         for _, row in worst_channels.iterrows():
             st.write(f"- **{row['channel_group']}**: {row['full_consent_rate']:.1f}%")
             st.write(f" ({row['unique_users']:,} usuarios)")
     
     # Análisis de ratio consent/denial
-    st.subheader(" Ratio de Aceptación vs Rechazo")
+    st.subheader("Ratio de Aceptación vs Rechazo")
     
     # Añadir columna de ratio
     channel_stats['consent_ratio'] = (
@@ -912,7 +912,7 @@ def mostrar_consentimiento_por_fuente_trafico(df):
     
     # Análisis de campañas específicas (si hay datos)
     if not df['utm_campaign'].isna().all():
-        st.subheader(" Top Campañas por Consentimiento")
+        st.subheader("Top Campañas por Consentimiento")
         
         campaign_stats = df[df['utm_campaign'].notna()].groupby('utm_campaign').agg({
             'unique_users': 'sum',
