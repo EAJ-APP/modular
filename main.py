@@ -103,7 +103,7 @@ def show_main_app():
     st.divider()
 
     # Mostrar info de dataset seleccionado de forma compacta
-    with st.expander("ℹ Información del Proyecto", expanded=False):
+    with st.expander("Información del Proyecto", expanded=False):
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Proyecto", selected_project)

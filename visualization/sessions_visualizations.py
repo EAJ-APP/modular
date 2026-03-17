@@ -317,7 +317,7 @@ def mostrar_exit_pages_analysis(df):
 
 def mostrar_hourly_sessions_performance(df):
     """Visualización para Hourly Sessions Ecommerce Performance"""
-    st.subheader("⏰ Rendimiento de Sesiones por Hora")
+    st.subheader("Rendimiento de Sesiones por Hora")
     
     if df.empty:
         st.warning("No hay datos de rendimiento horario para el rango seleccionado")
