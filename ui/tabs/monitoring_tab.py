@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 def show_monitoring_tab(client=None, project=None):
     """Pestaña de Monitorización de Consultas BigQuery"""
     
-    st.title("📊 Monitorización de Consultas BigQuery")
+    st.title(" Monitorización de Consultas BigQuery")
     
     st.markdown("""
     Esta pestaña muestra información sobre las consultas ejecutadas en la sesión actual,
@@ -23,11 +23,11 @@ def show_monitoring_tab(client=None, project=None):
     monitoring_data = st.session_state.monitoring_data
     
     if not monitoring_data:
-        st.info("👋 No hay consultas registradas aún. Ejecuta algunas consultas en otros tabs para ver estadísticas aquí.")
+        st.info(" No hay consultas registradas aún. Ejecuta algunas consultas en otros tabs para ver estadísticas aquí.")
         return
     
     # Métricas generales
-    st.subheader("📈 Métricas Generales de la Sesión")
+    st.subheader(" Métricas Generales de la Sesión")
     
     total_queries = len(monitoring_data)
     successful_queries = sum(1 for q in monitoring_data if q['status'] == 'Success')
@@ -56,7 +56,7 @@ def show_monitoring_tab(client=None, project=None):
     st.divider()
     
     # Duración de consultas
-    st.subheader("⏱️ Duración de Consultas")
+    st.subheader("⏱ Duración de Consultas")
     
     # Crear DataFrame para análisis
     df_monitoring = pd.DataFrame(monitoring_data)
@@ -97,7 +97,7 @@ def show_monitoring_tab(client=None, project=None):
     st.divider()
     
     # GB usados por query
-    st.subheader("📊 GB Usados por Consulta")
+    st.subheader(" GB Usados por Consulta")
     
     if monitoring_data:
         # Ordenar por GB usados descendente
@@ -145,7 +145,7 @@ def show_monitoring_tab(client=None, project=None):
     st.divider()
     
     # Distribución de estados
-    st.subheader("✅ Estado de las Consultas")
+    st.subheader(" Estado de las Consultas")
     
     col1, col2 = st.columns(2)
     
@@ -163,39 +163,39 @@ def show_monitoring_tab(client=None, project=None):
     
     with col2:
         # Métricas de rendimiento
-        st.write("**📊 Indicadores de Rendimiento:**")
+        st.write("** Indicadores de Rendimiento:**")
         
         success_rate = (successful_queries / total_queries * 100) if total_queries > 0 else 0
         
         if success_rate >= 95:
-            st.success(f"✅ Tasa de éxito: {success_rate:.1f}% - Excelente")
+            st.success(f" Tasa de éxito: {success_rate:.1f}% - Excelente")
         elif success_rate >= 80:
-            st.info(f"ℹ️ Tasa de éxito: {success_rate:.1f}% - Bueno")
+            st.info(f"ℹ Tasa de éxito: {success_rate:.1f}% - Bueno")
         else:
-            st.warning(f"⚠️ Tasa de éxito: {success_rate:.1f}% - Necesita atención")
+            st.warning(f" Tasa de éxito: {success_rate:.1f}% - Necesita atención")
         
         # Promedio de GB por consulta
         avg_gb_per_query = total_gb / total_queries if total_queries > 0 else 0
         
         if avg_gb_per_query < 0.5:
-            st.success(f"✅ Consumo promedio: {avg_gb_per_query:.3f} GB - Eficiente")
+            st.success(f" Consumo promedio: {avg_gb_per_query:.3f} GB - Eficiente")
         elif avg_gb_per_query < 2.0:
-            st.info(f"ℹ️ Consumo promedio: {avg_gb_per_query:.3f} GB - Moderado")
+            st.info(f"ℹ Consumo promedio: {avg_gb_per_query:.3f} GB - Moderado")
         else:
-            st.warning(f"⚠️ Consumo promedio: {avg_gb_per_query:.3f} GB - Alto consumo")
+            st.warning(f" Consumo promedio: {avg_gb_per_query:.3f} GB - Alto consumo")
         
         # Tiempo promedio
         if avg_duration < 5:
-            st.success(f"✅ Tiempo promedio: {avg_duration:.2f}s - Rápido")
+            st.success(f" Tiempo promedio: {avg_duration:.2f}s - Rápido")
         elif avg_duration < 15:
-            st.info(f"ℹ️ Tiempo promedio: {avg_duration:.2f}s - Normal")
+            st.info(f"ℹ Tiempo promedio: {avg_duration:.2f}s - Normal")
         else:
-            st.warning(f"⚠️ Tiempo promedio: {avg_duration:.2f}s - Lento")
+            st.warning(f" Tiempo promedio: {avg_duration:.2f}s - Lento")
     
     st.divider()
     
     # Tabla completa de consultas
-    st.subheader("📋 Tabla Completa de Consultas")
+    st.subheader(" Tabla Completa de Consultas")
     
     if monitoring_data:
         # Preparar datos para la tabla
@@ -236,9 +236,9 @@ def show_monitoring_tab(client=None, project=None):
         
         # Información adicional
         st.caption(f"""
-        📊 **Total de consultas en sesión:** {len(monitoring_data)} | 
-        ✅ **Exitosas:** {sum(1 for q in monitoring_data if q['status'] == 'Success')} | 
-        ❌ **Con errores:** {sum(1 for q in monitoring_data if q['status'] == 'Error')}
+         **Total de consultas en sesión:** {len(monitoring_data)} | 
+         **Exitosas:** {sum(1 for q in monitoring_data if q['status'] == 'Success')} | 
+         **Con errores:** {sum(1 for q in monitoring_data if q['status'] == 'Error')}
         """)
         
         # Botón para exportar
@@ -246,7 +246,7 @@ def show_monitoring_tab(client=None, project=None):
         with col1:
             csv_queries = df_queries.to_csv(index=False)
             st.download_button(
-                label="📥 Descargar CSV",
+                label=" Descargar CSV",
                 data=csv_queries,
                 file_name=f"consultas_bigquery_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv"
@@ -257,7 +257,7 @@ def show_monitoring_tab(client=None, project=None):
     st.divider()
     
     # Timeline de consultas
-    st.subheader("📅 Timeline de Consultas")
+    st.subheader(" Timeline de Consultas")
     
     if not df_monitoring.empty and 'timestamp' in df_monitoring.columns:
         # Convertir timestamp a formato legible
@@ -285,50 +285,50 @@ def show_monitoring_tab(client=None, project=None):
     st.divider()
     
     # Recomendaciones
-    st.subheader("💡 Recomendaciones")
+    st.subheader(" Recomendaciones")
     
     recommendations = []
     
     # Análisis de errores
     if failed_queries > 0:
         error_rate = (failed_queries / total_queries * 100)
-        recommendations.append(f"⚠️ Tienes {failed_queries} consultas con errores ({error_rate:.1f}%). Revisa los logs para identificar problemas.")
+        recommendations.append(f" Tienes {failed_queries} consultas con errores ({error_rate:.1f}%). Revisa los logs para identificar problemas.")
     
     # Análisis de duración
     if avg_duration > 20:
-        recommendations.append(f"🐌 El tiempo promedio de consulta es {avg_duration:.2f}s. Considera optimizar las consultas más lentas o reducir el rango de fechas.")
+        recommendations.append(f" El tiempo promedio de consulta es {avg_duration:.2f}s. Considera optimizar las consultas más lentas o reducir el rango de fechas.")
     
     # Análisis de GB
     if avg_gb > 1.0:
-        recommendations.append(f"💾 El consumo promedio por consulta es {avg_gb:.3f} GB. Intenta filtrar más datos o usar particiones.")
+        recommendations.append(f" El consumo promedio por consulta es {avg_gb:.3f} GB. Intenta filtrar más datos o usar particiones.")
     
     # Consultas específicas lentas
     slow_queries = [q for q in monitoring_data if q['duration'] > 30]
     if slow_queries:
-        recommendations.append(f"⏱️ Tienes {len(slow_queries)} consultas que tardaron más de 30 segundos. Considera optimizarlas.")
+        recommendations.append(f"⏱ Tienes {len(slow_queries)} consultas que tardaron más de 30 segundos. Considera optimizarlas.")
     
     # Consultas pesadas en GB
     heavy_queries = [q for q in monitoring_data if q['gb_used'] > 2.0]
     if heavy_queries:
-        recommendations.append(f"📊 Tienes {len(heavy_queries)} consultas que procesaron más de 2 GB. Revisa si puedes reducir el volumen de datos.")
+        recommendations.append(f" Tienes {len(heavy_queries)} consultas que procesaron más de 2 GB. Revisa si puedes reducir el volumen de datos.")
     
     if recommendations:
         for rec in recommendations:
             st.warning(rec)
     else:
-        st.success("✅ ¡Excelente! Todas las métricas están en rangos óptimos.")
+        st.success(" ¡Excelente! Todas las métricas están en rangos óptimos.")
     
     st.divider()
     
     # Botón para limpiar monitorización
-    st.subheader("🗑️ Gestión de Datos")
+    st.subheader(" Gestión de Datos")
     
     col1, col2 = st.columns([1, 4])
     
     with col1:
-        if st.button("🗑️ Limpiar Historial", type="secondary"):
+        if st.button(" Limpiar Historial", type="secondary"):
             st.session_state.monitoring_data = []
-            st.success("✅ Historial de consultas limpiado")
+            st.success(" Historial de consultas limpiado")
             st.rerun()
     
     with col2:

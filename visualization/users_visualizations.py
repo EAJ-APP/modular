@@ -6,7 +6,7 @@ from config.settings import Settings
 
 def mostrar_retencion_semanal(df):
     """Visualización para Weekly User Retention Analysis"""
-    st.subheader("📅 Análisis de Retención Semanal de Usuarios")
+    st.subheader(" Análisis de Retención Semanal de Usuarios")
     
     if df.empty:
         st.warning("No hay datos de retención semanal para el rango seleccionado")
@@ -30,7 +30,7 @@ def mostrar_retencion_semanal(df):
         st.metric("Retención Semana 4 (Promedio)", f"{avg_week4_retention:.1f}%")
     
     # Tabla de retención
-    st.subheader("📊 Tabla de Retención por Cohorte")
+    st.subheader(" Tabla de Retención por Cohorte")
     display_df = df[[
         'cohort_display', 'cohort_size', 'week_0_users', 'week_1_users', 
         'week_2_users', 'week_3_users', 'week_4_users',
@@ -75,7 +75,7 @@ def mostrar_retencion_semanal(df):
     
     # Heatmap de retención por cohorte
     if len(df) > 1:
-        st.subheader("🔥 Heatmap de Retención")
+        st.subheader(" Heatmap de Retención")
         
         heatmap_data = df[['cohort_display'] + retention_cols].set_index('cohort_display')
         heatmap_data.columns = ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4']
@@ -90,7 +90,7 @@ def mostrar_retencion_semanal(df):
         st.plotly_chart(fig_heatmap, use_container_width=True)
     
     # Análisis de drop-off
-    st.subheader("📉 Análisis de Drop-off")
+    st.subheader(" Análisis de Drop-off")
     avg_drop_week1 = 100 - avg_week1_retention
     avg_drop_week4 = avg_week1_retention - avg_week4_retention
     
@@ -102,7 +102,7 @@ def mostrar_retencion_semanal(df):
 
 def mostrar_clv_sesiones(df):
     """Visualización para Customer Lifetime Value with Sessions"""
-    st.subheader("💰 Customer Lifetime Value (CLV) y Sesiones")
+    st.subheader(" Customer Lifetime Value (CLV) y Sesiones")
     
     if df.empty:
         st.warning("No hay datos de CLV para el rango seleccionado")
@@ -127,7 +127,7 @@ def mostrar_clv_sesiones(df):
         st.metric("CLV Promedio (Buyers)", f"€{avg_clv:,.2f}")
     
     # Distribución Buyers vs Non-Buyers
-    st.subheader("👥 Distribución de Usuarios")
+    st.subheader(" Distribución de Usuarios")
     
     col1, col2 = st.columns(2)
     
@@ -156,7 +156,7 @@ def mostrar_clv_sesiones(df):
             st.write(f"- Buyers: €{buyers_df['revenue_per_session'].mean():.2f}")
     
     # Top usuarios por CLV
-    st.subheader("🏆 Top Usuarios por CLV")
+    st.subheader(" Top Usuarios por CLV")
     top_users = df.nlargest(20, 'customer_lifetime_value')
     
     fig_top = px.bar(
@@ -176,7 +176,7 @@ def mostrar_clv_sesiones(df):
     st.plotly_chart(fig_top, use_container_width=True)
     
     # Scatter: Sesiones vs CLV
-    st.subheader("📊 Relación: Sesiones vs CLV")
+    st.subheader(" Relación: Sesiones vs CLV")
     
     buyers_only = df[df['customer_lifetime_value'] > 0]
     fig_scatter = px.scatter(
@@ -197,7 +197,7 @@ def mostrar_clv_sesiones(df):
     st.plotly_chart(fig_scatter, use_container_width=True)
     
     # Histograma de distribución de CLV
-    st.subheader("📈 Distribución del CLV")
+    st.subheader(" Distribución del CLV")
     
     clv_buyers = df[df['customer_lifetime_value'] > 0]['customer_lifetime_value']
     fig_hist = px.histogram(
@@ -211,7 +211,7 @@ def mostrar_clv_sesiones(df):
 
 def mostrar_tiempo_primera_compra(df):
     """Visualización para Time from First Visit to Purchase"""
-    st.subheader("⏱️ Tiempo desde Primera Visita hasta Compra")
+    st.subheader("⏱ Tiempo desde Primera Visita hasta Compra")
     
     if df.empty:
         st.warning("No hay datos de tiempo a compra para el rango seleccionado")
@@ -241,7 +241,7 @@ def mostrar_tiempo_primera_compra(df):
     }))
     
     # Gráfico de barras - Top fuentes por velocidad
-    st.subheader("🚀 Top Fuentes por Velocidad de Conversión")
+    st.subheader(" Top Fuentes por Velocidad de Conversión")
     
     top_fastest = df.nsmallest(15, 'avg_days_to_purchase')
     
@@ -263,7 +263,7 @@ def mostrar_tiempo_primera_compra(df):
     st.plotly_chart(fig_fastest, use_container_width=True)
     
     # Scatter plot: Volumen vs Velocidad
-    st.subheader("📊 Volumen de Compradores vs Velocidad")
+    st.subheader(" Volumen de Compradores vs Velocidad")
     
     fig_scatter = px.scatter(
         df.head(30),
@@ -283,7 +283,7 @@ def mostrar_tiempo_primera_compra(df):
     st.plotly_chart(fig_scatter, use_container_width=True)
     
     # Análisis por medio
-    st.subheader("🎯 Análisis por Medio de Adquisición")
+    st.subheader(" Análisis por Medio de Adquisición")
     
     medio_stats = df.groupby('first_medium').agg({
         'users_with_purchase': 'sum',
@@ -306,25 +306,25 @@ def mostrar_tiempo_primera_compra(df):
     st.plotly_chart(fig_medio, use_container_width=True)
     
     # Insights de velocidad
-    st.subheader("💡 Insights Clave")
+    st.subheader(" Insights Clave")
     
     fast_sources = df[df['avg_days_to_purchase'] < 7]
     slow_sources = df[df['avg_days_to_purchase'] > 30]
     
     col1, col2 = st.columns(2)
     with col1:
-        st.write("**🚀 Fuentes Rápidas (< 7 días):**")
+        st.write("** Fuentes Rápidas (< 7 días):**")
         st.write(f"- {len(fast_sources)} fuentes")
         st.write(f"- {fast_sources['users_with_purchase'].sum():,} compradores")
     
     with col2:
-        st.write("**🐌 Fuentes Lentas (> 30 días):**")
+        st.write("** Fuentes Lentas (> 30 días):**")
         st.write(f"- {len(slow_sources)} fuentes")
         st.write(f"- {slow_sources['users_with_purchase'].sum():,} compradores")
 
 def mostrar_landing_page_attribution(df):
     """Visualización para First Landing Page Attribution"""
-    st.subheader("🎯 Atribución por Primera Landing Page")
+    st.subheader(" Atribución por Primera Landing Page")
     
     if df.empty:
         st.warning("No hay datos de landing pages para el rango seleccionado")
@@ -361,7 +361,7 @@ def mostrar_landing_page_attribution(df):
     }))
     
     # Top 10 Landing Pages por Revenue
-    st.subheader("💰 Top 10 Landing Pages por Revenue")
+    st.subheader(" Top 10 Landing Pages por Revenue")
     
     top_10_revenue = df.head(10)
     
@@ -383,7 +383,7 @@ def mostrar_landing_page_attribution(df):
     st.plotly_chart(fig_revenue, use_container_width=True)
     
     # Funnel de conversión promedio
-    st.subheader("📊 Funnel de Conversión Agregado")
+    st.subheader(" Funnel de Conversión Agregado")
     
     funnel_data = {
         'Etapa': ['Page Views', 'View Items', 'Add to Cart', 'Begin Checkout', 'Purchases'],
@@ -405,7 +405,7 @@ def mostrar_landing_page_attribution(df):
     st.plotly_chart(fig_funnel, use_container_width=True)
     
     # Scatter: Usuarios vs Revenue
-    st.subheader("📈 Relación: Volumen de Usuarios vs Revenue")
+    st.subheader(" Relación: Volumen de Usuarios vs Revenue")
     
     fig_scatter = px.scatter(
         df.head(30),
@@ -429,7 +429,7 @@ def mostrar_landing_page_attribution(df):
 
 def mostrar_adquisicion_usuarios(df):
     """Visualización para User Acquisition by Source/Medium"""
-    st.subheader("📍 Adquisición de Usuarios por Fuente y Medio")
+    st.subheader(" Adquisición de Usuarios por Fuente y Medio")
     
     if df.empty:
         st.warning("No hay datos de adquisición para el rango seleccionado")
@@ -462,7 +462,7 @@ def mostrar_adquisicion_usuarios(df):
     }))
     
     # Análisis por Channel Group
-    st.subheader("🎯 Performance por Channel Group")
+    st.subheader(" Performance por Channel Group")
     
     channel_stats = df.groupby('channel_group').agg({
         'total_users': 'sum',
@@ -497,7 +497,7 @@ def mostrar_adquisicion_usuarios(df):
         st.plotly_chart(fig_channel_revenue, use_container_width=True)
     
     # Top fuentes
-    st.subheader("🏆 Top Fuentes de Adquisición")
+    st.subheader(" Top Fuentes de Adquisición")
     
     top_sources = df.nlargest(15, 'total_users')
     
@@ -515,7 +515,7 @@ def mostrar_adquisicion_usuarios(df):
     st.plotly_chart(fig_sources, use_container_width=True)
     
     # Scatter: Volumen vs Calidad
-    st.subheader("💎 Análisis de Volumen vs Calidad")
+    st.subheader(" Análisis de Volumen vs Calidad")
     
     fig_quality = px.scatter(
         df.head(50),
@@ -537,7 +537,7 @@ def mostrar_adquisicion_usuarios(df):
 
 def mostrar_conversion_mensual(df):
     """Visualización para Monthly User Conversion Rate"""
-    st.subheader("📅 Tasa de Conversión Mensual de Usuarios")
+    st.subheader(" Tasa de Conversión Mensual de Usuarios")
     
     if df.empty:
         st.warning("No hay datos de conversión mensual para el rango seleccionado")
@@ -548,7 +548,7 @@ def mostrar_conversion_mensual(df):
     
     # Convertir el mes a formato datetime para mejor manejo
     df['month_date'] = pd.to_datetime(df['month'] + '-01')
-    df['month_display'] = df['month_date'].dt.strftime('%B %Y')  # Formato: "Junio 2025"
+    df['month_display'] = df['month_date'].dt.strftime('%B %Y') # Formato: "Junio 2025"
     
     # Cambiar locale para español (intentar, si falla usar inglés)
     try:
@@ -599,7 +599,7 @@ def mostrar_conversion_mensual(df):
     }))
     
     # Gráfico de evolución de conversión
-    st.subheader("📈 Evolución de la Tasa de Conversión")
+    st.subheader(" Evolución de la Tasa de Conversión")
     
     fig_conversion = go.Figure()
     fig_conversion.add_trace(go.Scatter(
@@ -619,7 +619,7 @@ def mostrar_conversion_mensual(df):
     st.plotly_chart(fig_conversion, use_container_width=True)
     
     # Comparativa: Usuarios vs Conversores
-    st.subheader("👥 Usuarios Totales vs Conversores")
+    st.subheader(" Usuarios Totales vs Conversores")
     
     fig_users = go.Figure()
     fig_users.add_trace(go.Bar(
@@ -644,7 +644,7 @@ def mostrar_conversion_mensual(df):
     st.plotly_chart(fig_users, use_container_width=True)
     
     # Revenue analysis
-    st.subheader("💰 Análisis de Revenue")
+    st.subheader(" Análisis de Revenue")
     
     col1, col2 = st.columns(2)
     

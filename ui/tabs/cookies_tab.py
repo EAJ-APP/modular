@@ -55,7 +55,7 @@ def show_cookies_tab(client, project, dataset, start_date, end_date):
     # ==========================================
     # SECCIÓN 1: Evolución Temporal (NUEVO)
     # ==========================================
-    with st.expander("📈 Evolución Temporal del Consentimiento", 
+    with st.expander(" Evolución Temporal del Consentimiento", 
                      expanded=st.session_state.cookies_evolucion_show):
         st.info("""
         **Análisis de tendencias día a día:**
@@ -79,7 +79,7 @@ def show_cookies_tab(client, project, dataset, start_date, end_date):
     # ==========================================
     # SECCIÓN 2: Consentimiento Básico (ORIGINAL)
     # ==========================================
-    with st.expander("🛡️ Consentimiento Básico", expanded=st.session_state.cookies_basico_show):
+    with st.expander(" Consentimiento Básico", expanded=st.session_state.cookies_basico_show):
         st.info("""
         **Análisis de consentimiento de cookies:**
         - Distribución de `analytics_storage` y `ads_storage`
@@ -101,7 +101,7 @@ def show_cookies_tab(client, project, dataset, start_date, end_date):
     # ==========================================
     # SECCIÓN 3: Consentimiento por Dispositivo (ORIGINAL)
     # ==========================================
-    with st.expander("📱 Consentimiento por Dispositivo", expanded=st.session_state.cookies_dispositivo_show):
+    with st.expander(" Consentimiento por Dispositivo", expanded=st.session_state.cookies_dispositivo_show):
         st.info("""
         **Análisis cross-device de consentimientos:**
         - Comparativa entre Desktop, Mobile y Tablet
@@ -123,7 +123,7 @@ def show_cookies_tab(client, project, dataset, start_date, end_date):
     # ==========================================
     # SECCIÓN 4: Consentimiento por Geografía (NUEVO)
     # ==========================================
-    with st.expander("🌍 Consentimiento por Geografía", 
+    with st.expander(" Consentimiento por Geografía", 
                      expanded=st.session_state.cookies_geografia_show):
         st.info("""
         **Análisis geográfico de consentimientos:**
@@ -147,7 +147,7 @@ def show_cookies_tab(client, project, dataset, start_date, end_date):
     # ==========================================
     # SECCIÓN 5: Consentimiento por Fuente de Tráfico (NUEVO)
     # ==========================================
-    with st.expander("📊 Consentimiento por Fuente de Tráfico", 
+    with st.expander(" Consentimiento por Fuente de Tráfico", 
                      expanded=st.session_state.cookies_trafico_show):
         st.info("""
         **Análisis por canal de marketing:**
@@ -172,7 +172,7 @@ def show_cookies_tab(client, project, dataset, start_date, end_date):
     # ==========================================
     # SECCIÓN 6: Porcentaje Real de Consentimiento (ORIGINAL)
     # ==========================================
-    with st.expander("🔍 Porcentaje Real de Consentimiento", expanded=st.session_state.cookies_real_show):
+    with st.expander(" Porcentaje Real de Consentimiento", expanded=st.session_state.cookies_real_show):
         st.info("""
         **Análisis preciso del consentimiento:**
         - Tasa real de eventos con consentimiento
@@ -193,12 +193,12 @@ def show_cookies_tab(client, project, dataset, start_date, end_date):
             mostrar_consentimiento_real(st.session_state.cookies_real_data)
     
     # Mensaje de completado
-    st.success("✅ **Todas las consultas de Cookies y Privacidad están disponibles!**")
+    st.success(" **Todas las consultas de Cookies y Privacidad están disponibles!**")
     
     # Información adicional sobre GDPR y privacidad
-    with st.expander("ℹ️ Información sobre GDPR y Compliance", expanded=False):
+    with st.expander("ℹ Información sobre GDPR y Compliance", expanded=False):
         st.markdown("""
-        ### 📚 Guía de Cumplimiento GDPR
+        ### Guía de Cumplimiento GDPR
         
         **Requisitos básicos del GDPR para cookies:**
         
@@ -210,25 +210,25 @@ def show_cookies_tab(client, project, dataset, start_date, end_date):
         
         **Mejores prácticas:**
         
-        - ✅ Banner con opciones claras de "Aceptar" y "Rechazar"
-        - ✅ Opción de "Configurar" para consentimiento granular
-        - ✅ Link visible a política de privacidad
-        - ✅ Gestión de consentimiento accesible desde cualquier página
-        - ✅ Registrar el consentimiento con timestamp
+        - Banner con opciones claras de "Aceptar" y "Rechazar"
+        - Opción de "Configurar" para consentimiento granular
+        - Link visible a política de privacidad
+        - Gestión de consentimiento accesible desde cualquier página
+        - Registrar el consentimiento con timestamp
         
         **Tasas de consentimiento típicas:**
         
-        - 🇪🇺 **Europa (GDPR)**: 40-60% aceptación
-        - 🇺🇸 **Norteamérica**: 60-80% aceptación (menos regulación)
-        - 🌎 **LATAM**: 70-85% aceptación (regulación emergente)
-        - 🌏 **Asia**: 50-70% aceptación (muy variable por país)
+        - **Europa (GDPR)**: 40-60% aceptación
+        - **Norteamérica**: 60-80% aceptación (menos regulación)
+        - **LATAM**: 70-85% aceptación (regulación emergente)
+        - **Asia**: 50-70% aceptación (muy variable por país)
         
         **Señales de alerta:**
         
-        - 🚨 Tasa de consentimiento < 30% → Revisar UX del banner
-        - 🚨 Tasa de bounce > 70% tras banner → Banner demasiado intrusivo
-        - 🚨 Diferencia Analytics vs Ads > 30% → Revisar configuración
-        - 🚨 Caída brusca en consentimiento → Investigar causa inmediatamente
+        - Tasa de consentimiento < 30% → Revisar UX del banner
+        - Tasa de bounce > 70% tras banner → Banner demasiado intrusivo
+        - Diferencia Analytics vs Ads > 30% → Revisar configuración
+        - Caída brusca en consentimiento → Investigar causa inmediatamente
         
         **Recursos útiles:**
         

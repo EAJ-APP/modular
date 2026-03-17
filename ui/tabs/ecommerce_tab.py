@@ -45,7 +45,7 @@ def show_ecommerce_tab(client, project, dataset, start_date, end_date):
         st.session_state.ecommerce_combos_show = False
     
     # Sección 1: Funnel de Conversión
-    with st.expander("📊 Funnel de Conversión", expanded=st.session_state.ecommerce_funnel_show):
+    with st.expander(" Funnel de Conversión", expanded=st.session_state.ecommerce_funnel_show):
         st.info("""
         **Análisis completo del funnel de ecommerce:**
         - 5 etapas: page_view → view_item → add_to_cart → begin_checkout → purchase
@@ -66,7 +66,7 @@ def show_ecommerce_tab(client, project, dataset, start_date, end_date):
             mostrar_comparativa_eventos(st.session_state.ecommerce_funnel_data)
     
     # Sección 2: Ingresos y Transacciones
-    with st.expander("💰 Ingresos y Transacciones", expanded=st.session_state.ecommerce_ingresos_show):
+    with st.expander(" Ingresos y Transacciones", expanded=st.session_state.ecommerce_ingresos_show):
         st.info("""
         **Análisis de revenue y transacciones:**
         - Evolución temporal de ingresos
@@ -88,7 +88,7 @@ def show_ecommerce_tab(client, project, dataset, start_date, end_date):
             mostrar_ingresos_transacciones(st.session_state.ecommerce_ingresos_data)
     
     # Sección 3: Productos Más Vendidos
-    with st.expander("🏆 Productos Más Vendidos", expanded=st.session_state.ecommerce_productos_show):
+    with st.expander(" Productos Más Vendidos", expanded=st.session_state.ecommerce_productos_show):
         st.info("""
         **Performance de productos por ingresos:**
         - Top productos ordenados por revenue
@@ -111,7 +111,7 @@ def show_ecommerce_tab(client, project, dataset, start_date, end_date):
             mostrar_productos_mas_vendidos(st.session_state.ecommerce_productos_data)
     
     # Sección 4: Relación ID vs Nombre de Productos
-    with st.expander("🔍 Relación ID vs Nombre de Productos", expanded=st.session_state.ecommerce_relacion_show):
+    with st.expander(" Relación ID vs Nombre de Productos", expanded=st.session_state.ecommerce_relacion_show):
         st.info("""
         **Análisis de consistencia de datos:**
         - Validación de relación item_id ↔ item_name
@@ -135,7 +135,7 @@ def show_ecommerce_tab(client, project, dataset, start_date, end_date):
     # ==========================================
     # SECCIÓN 5: Análisis de Combos y Cross-Selling (NUEVO)
     # ==========================================
-    with st.expander("🔄 Análisis de Combos y Cross-Selling", 
+    with st.expander(" Análisis de Combos y Cross-Selling", 
                      expanded=st.session_state.ecommerce_combos_show):
         st.info("""
         **Market Basket Analysis:**
@@ -156,4 +156,4 @@ def show_ecommerce_tab(client, project, dataset, start_date, end_date):
         if st.session_state.ecommerce_combos_show and st.session_state.ecommerce_combos_data is not None:
             mostrar_combos_cross_selling(st.session_state.ecommerce_combos_data)
     # Mensaje de completado
-    st.success("✅ **Todas las consultas de Ecommerce están disponibles!**")
+    st.success(" **Todas las consultas de Ecommerce están disponibles!**")

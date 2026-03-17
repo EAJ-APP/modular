@@ -6,7 +6,7 @@ from config.settings import Settings
 
 def mostrar_eventos_flatten(df):
     """Visualización para datos flattened de eventos"""
-    st.subheader("📋 Datos Completos de Eventos (Flattenizados)")
+    st.subheader(" Datos Completos de Eventos (Flattenizados)")
     
     if df.empty:
         st.warning("No hay datos de eventos para el rango seleccionado")
@@ -26,7 +26,7 @@ def mostrar_eventos_flatten(df):
         st.metric("Usuarios Únicos", f"{unique_users}")
     
     # Información sobre las columnas
-    st.subheader("📊 Información del Dataset")
+    st.subheader(" Información del Dataset")
     col1, col2 = st.columns(2)
     
     with col1:
@@ -35,7 +35,7 @@ def mostrar_eventos_flatten(df):
         main_cols = ['event_name', 'user_pseudo_id', 'event_timestamp', 'ga_session_id']
         for col in main_cols:
             if col in df.columns:
-                st.write(f"- ✅ {col}")
+                st.write(f"- {col}")
     
     with col2:
         st.write("**Categorías de Datos:**")
@@ -45,7 +45,7 @@ def mostrar_eventos_flatten(df):
         st.write("- Otros campos de GA4")
     
     # Selector de eventos para filtrar - CON SESSION STATE
-    st.subheader("🔍 Explorador de Datos")
+    st.subheader(" Explorador de Datos")
     
     if 'event_name' in df.columns:
         # Inicializar session_state
@@ -75,15 +75,15 @@ def mostrar_eventos_flatten(df):
     
     # Mostrar tabla con opciones de descarga
     st.dataframe(
-        df_filtrado.head(100),  # Limitar a 100 filas para rendimiento
+        df_filtrado.head(100), # Limitar a 100 filas para rendimiento
         use_container_width=True,
         height=400
     )
     
-    st.info("ℹ️ Mostrando primeras 100 filas. La consulta está limitada a 1000 registros totales para optimizar el rendimiento.")
+    st.info("ℹ Mostrando primeras 100 filas. La consulta está limitada a 1000 registros totales para optimizar el rendimiento.")
     
     # Botón de descarga
-    if st.button("📥 Descargar CSV completo (1000 filas)", key="download_flatten"):
+    if st.button(" Descargar CSV completo (1000 filas)", key="download_flatten"):
         csv = df_filtrado.to_csv(index=False)
         st.download_button(
             label="Descargar datos",
@@ -94,7 +94,7 @@ def mostrar_eventos_flatten(df):
 
 def mostrar_eventos_resumen(df):
     """Visualización para resumen de eventos"""
-    st.subheader("📊 Resumen de Eventos")
+    st.subheader(" Resumen de Eventos")
     
     if df.empty:
         st.warning("No hay datos de eventos para el rango seleccionado")
@@ -157,7 +157,7 @@ def mostrar_eventos_resumen(df):
     st.plotly_chart(fig_scatter, use_container_width=True)
     
     # Análisis de concentración
-    st.subheader("📈 Análisis de Concentración de Eventos")
+    st.subheader(" Análisis de Concentración de Eventos")
     
     top_5_pct = (df.head(5)['total_events'].sum() / total_events * 100)
     top_10_pct = (df.head(10)['total_events'].sum() / total_events * 100)
@@ -170,7 +170,7 @@ def mostrar_eventos_resumen(df):
 
 def mostrar_eventos_por_fecha(df):
     """Visualización para evolución temporal de eventos"""
-    st.subheader("📅 Evolución Temporal de Eventos")
+    st.subheader(" Evolución Temporal de Eventos")
     
     if df.empty:
         st.warning("No hay datos de eventos por fecha")
@@ -244,7 +244,7 @@ def mostrar_eventos_por_fecha(df):
 
 def mostrar_parametros_evento(df, event_name):
     """Visualización para parámetros de un evento específico"""
-    st.subheader(f"🔍 Parámetros del Evento: {event_name}")
+    st.subheader(f" Parámetros del Evento: {event_name}")
     
     if df.empty:
         st.warning(f"No hay datos de parámetros para el evento '{event_name}'")
@@ -282,7 +282,7 @@ def mostrar_parametros_evento(df, event_name):
 
 def mostrar_metricas_diarias(df):
     """Visualización para métricas diarias completas"""
-    st.subheader("📊 Métricas Diarias de Rendimiento")
+    st.subheader(" Métricas Diarias de Rendimiento")
     
     if df.empty:
         st.warning("No hay datos de métricas diarias para el rango seleccionado")
@@ -302,7 +302,7 @@ def mostrar_metricas_diarias(df):
     avg_engagement_rate = df['engagementRate_percent'].mean()
     
     # Mostrar métricas clave en cards
-    st.subheader("📈 Resumen del Período")
+    st.subheader(" Resumen del Período")
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -320,7 +320,7 @@ def mostrar_metricas_diarias(df):
         st.metric("Ingresos/Sesión", f"€{revenue_per_session:.2f}")
     
     # Mostrar tabla completa
-    st.subheader("📋 Tabla de Datos")
+    st.subheader(" Tabla de Datos")
     st.dataframe(df.style.format({
         'sessions': '{:,}',
         'averageSessionDuration_seconds': '{:.2f}',
@@ -335,7 +335,7 @@ def mostrar_metricas_diarias(df):
     }))
     
     # Gráficos de evolución
-    st.subheader("📊 Evolución Temporal")
+    st.subheader(" Evolución Temporal")
     
     # Selector de métrica a visualizar
     if 'metricas_diarias_selected_metric' not in st.session_state:
@@ -380,7 +380,7 @@ def mostrar_metricas_diarias(df):
     st.plotly_chart(fig_line, use_container_width=True)
     
     # Gráficos de comparación
-    st.subheader("🔄 Comparativas")
+    st.subheader(" Comparativas")
     
     col1, col2 = st.columns(2)
     
@@ -427,7 +427,7 @@ def mostrar_metricas_diarias(df):
     
     # Análisis de conversión (si hay compras)
     if total_purchases > 0:
-        st.subheader("💰 Análisis de Conversión")
+        st.subheader(" Análisis de Conversión")
         
         col1, col2 = st.columns(2)
         
@@ -472,7 +472,7 @@ def mostrar_metricas_diarias(df):
             st.plotly_chart(fig_conversion, use_container_width=True)
     
     # Botón de descarga
-    if st.button("📥 Descargar Datos CSV", key="download_metricas_diarias"):
+    if st.button(" Descargar Datos CSV", key="download_metricas_diarias"):
         csv = df.to_csv(index=False)
         st.download_button(
             label="Descargar CSV",

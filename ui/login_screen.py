@@ -11,8 +11,8 @@ def show_login_screen():
     st.set_page_config(
         page_title="BigQuery Shield - Login",
         layout="centered",
-        page_icon="🛡️",
-        initial_sidebar_state="collapsed"  # Ocultar sidebar por defecto
+        page_icon="",
+        initial_sidebar_state="collapsed" # Ocultar sidebar por defecto
     )
     
     # CSS para ocultar completamente el sidebar y el menú de navegación
@@ -39,14 +39,14 @@ def show_login_screen():
     # Header con logo y título
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.title("🛡️ BigQuery Shield")
+        st.title(" BigQuery Shield")
         st.markdown("### Plataforma de Análisis GA4")
     
     st.divider()
     
     # IMPORTANTE: Manejar callback ANTES de mostrar opciones
     if handle_oauth_callback():
-        return  # Si hay callback exitoso, no mostrar el resto
+        return # Si hay callback exitoso, no mostrar el resto
     
     # Verificar qué métodos están disponibles
     oauth_available = AuthConfig.is_oauth_configured()
@@ -58,7 +58,7 @@ def show_login_screen():
     
     # OPCIÓN 1: OAuth Login con Google - URL PRE-GENERADA
     with st.container():
-        st.markdown("### 🔐 Login con Google")
+        st.markdown("### Login con Google")
         st.markdown("Accede usando tu cuenta de Google con permisos en BigQuery")
         
         if oauth_available:
@@ -77,34 +77,34 @@ def show_login_screen():
                 
                 # Botón directo con la URL ya generada
                 st.link_button(
-                    "🚀 Login con Google",
+                    " Login con Google",
                     auth_url,
                     use_container_width=True,
                     type="primary"
                 )
                 
                 # Opcional: mostrar la URL por si acaso
-                with st.expander("🔍 Ver URL de autenticación"):
+                with st.expander(" Ver URL de autenticación"):
                     st.code(auth_url, language=None)
                     st.caption("Puedes copiar esta URL y pegarla en tu navegador si el botón no funciona")
                 
             except Exception as e:
-                st.error(f"❌ Error generando URL de login: {str(e)}")
+                st.error(f" Error generando URL de login: {str(e)}")
             
             # Botón de debug
-            if st.button("🔧 ¿Problemas? Ver Debug", use_container_width=True, key="debug_oauth_btn"):
+            if st.button(" ¿Problemas? Ver Debug", use_container_width=True, key="debug_oauth_btn"):
                 st.switch_page("pages/debug_oauth.py")
                 
         else:
-            st.warning("⚠️ OAuth no configurado. Contacta al administrador.")
-            if st.button("🔧 Ver Debug", use_container_width=True):
+            st.warning(" OAuth no configurado. Contacta al administrador.")
+            if st.button(" Ver Debug", use_container_width=True):
                 st.switch_page("pages/debug_oauth.py")
     
     st.divider()
     
     # OPCIÓN 2: Upload JSON
     with st.container():
-        st.markdown("### 📄 Subir Service Account JSON")
+        st.markdown("### Subir Service Account JSON")
         st.markdown("Modo desarrollo: Sube un archivo JSON de service account")
         
         uploaded_file = st.file_uploader(
@@ -114,21 +114,21 @@ def show_login_screen():
         )
         
         if uploaded_file is not None:
-            if st.button("✅ Conectar con JSON", use_container_width=True):
+            if st.button(" Conectar con JSON", use_container_width=True):
                 handle_json_upload(uploaded_file)
     
     st.divider()
     
     # OPCIÓN 3: Usar Secrets
     with st.container():
-        st.markdown("### 🔑 Usar Secrets Configurados")
+        st.markdown("### Usar Secrets Configurados")
         st.markdown("Acceso directo usando service account pre-configurado")
         
         if secrets_available:
-            if st.button("⚡ Acceso Directo", use_container_width=True):
+            if st.button(" Acceso Directo", use_container_width=True):
                 handle_secrets_login()
         else:
-            st.warning("⚠️ Service Account no configurado en secrets.")
+            st.warning(" Service Account no configurado en secrets.")
     
     # Footer
     st.divider()
@@ -143,11 +143,11 @@ def handle_oauth_callback():
     
     # Debug: Mostrar parámetros recibidos (solo en desarrollo)
     if 'debug' in query_params and len(query_params) > 1:
-        with st.expander("🔍 Debug - Parámetros recibidos"):
+        with st.expander(" Debug - Parámetros recibidos"):
             st.json(dict(query_params))
     
     if 'code' in query_params:
-        with st.spinner("🔄 Completando autenticación..."):
+        with st.spinner(" Completando autenticación..."):
             try:
                 oauth_config = AuthConfig.get_oauth_config()
                 
@@ -155,7 +155,7 @@ def handle_oauth_callback():
                 progress_bar = st.progress(0)
                 status_text = st.empty()
                 
-                status_text.text("🔄 Intercambiando código por token...")
+                status_text.text(" Intercambiando código por token...")
                 progress_bar.progress(25)
                 
                 # Intercambiar código por token usando petición HTTP directa
@@ -172,13 +172,13 @@ def handle_oauth_callback():
                 )
                 
                 if token_response.status_code != 200:
-                    st.error(f"❌ Error obteniendo token: {token_response.status_code}")
+                    st.error(f" Error obteniendo token: {token_response.status_code}")
                     st.code(token_response.text)
                     return False
                 
                 token_data = token_response.json()
                 
-                status_text.text("✅ Token obtenido correctamente")
+                status_text.text(" Token obtenido correctamente")
                 progress_bar.progress(50)
                 
                 # Crear credenciales manualmente
@@ -197,13 +197,13 @@ def handle_oauth_callback():
                     expiry=expiry
                 )
                 
-                status_text.text("✅ Credenciales creadas")
+                status_text.text(" Credenciales creadas")
                 progress_bar.progress(75)
                 
                 # Obtener info del usuario
                 user_info = get_user_info_from_token(credentials.token)
                 
-                status_text.text(f"✅ Usuario identificado: {user_info.get('name', 'Usuario')}")
+                status_text.text(f" Usuario identificado: {user_info.get('name', 'Usuario')}")
                 progress_bar.progress(90)
                 
                 # Configurar sesión
@@ -213,10 +213,9 @@ def handle_oauth_callback():
                 st.query_params.clear()
                 
                 progress_bar.progress(100)
-                status_text.text("✅ ¡Autenticación completada!")
+                status_text.text(" ¡Autenticación completada!")
                 
-                st.success(f"✅ Bienvenido, {user_info.get('name', 'Usuario')}!")
-                st.balloons()
+                st.success(f" Bienvenido, {user_info.get('name', 'Usuario')}!")
                 
                 # Pequeña espera antes de recargar
                 import time
@@ -227,13 +226,13 @@ def handle_oauth_callback():
                 return True
                 
             except Exception as e:
-                st.error(f"❌ Error en callback OAuth: {str(e)}")
-                with st.expander("🔍 Ver detalles técnicos"):
+                st.error(f" Error en callback OAuth: {str(e)}")
+                with st.expander(" Ver detalles técnicos"):
                     import traceback
                     st.code(traceback.format_exc())
                 
                 # Botón para limpiar y volver a intentar
-                if st.button("🔄 Volver a intentar"):
+                if st.button(" Volver a intentar"):
                     st.query_params.clear()
                     st.rerun()
                 
@@ -255,7 +254,7 @@ def get_user_info_from_token(access_token: str) -> dict:
             return {'name': 'Usuario', 'email': 'unknown@example.com'}
             
     except Exception as e:
-        st.warning(f"⚠️ No se pudo obtener info del usuario: {e}")
+        st.warning(f" No se pudo obtener info del usuario: {e}")
         return {'name': 'Usuario', 'email': 'unknown@example.com'}
 
 def handle_json_upload(uploaded_file):
@@ -265,24 +264,23 @@ def handle_json_upload(uploaded_file):
         
         required_fields = ['type', 'project_id', 'private_key', 'client_email']
         if not all(field in credentials_dict for field in required_fields):
-            st.error("❌ JSON inválido. Asegúrate de usar un Service Account JSON válido.")
+            st.error(" JSON inválido. Asegúrate de usar un Service Account JSON válido.")
             return
         
         if credentials_dict['type'] != 'service_account':
-            st.error("❌ El archivo debe ser de tipo 'service_account'")
+            st.error(" El archivo debe ser de tipo 'service_account'")
             return
         
         credentials = service_account.Credentials.from_service_account_info(credentials_dict)
         SessionManager.set_service_account_session(credentials, method='json')
         
-        st.success(f"✅ Conectado como: {credentials.service_account_email}")
-        st.balloons()
+        st.success(f" Conectado como: {credentials.service_account_email}")
         st.rerun()
         
     except json.JSONDecodeError:
-        st.error("❌ Error leyendo el archivo JSON. Verifica que sea válido.")
+        st.error(" Error leyendo el archivo JSON. Verifica que sea válido.")
     except Exception as e:
-        st.error(f"❌ Error procesando el archivo: {str(e)}")
+        st.error(f" Error procesando el archivo: {str(e)}")
 
 def handle_secrets_login():
     """Maneja el login usando secrets configurados"""
@@ -291,9 +289,8 @@ def handle_secrets_login():
         credentials = service_account.Credentials.from_service_account_info(creds_dict)
         SessionManager.set_service_account_session(credentials, method='secrets')
         
-        st.success(f"✅ Conectado como: {credentials.service_account_email}")
-        st.balloons()
+        st.success(f" Conectado como: {credentials.service_account_email}")
         st.rerun()
         
     except Exception as e:
-        st.error(f"❌ Error conectando con secrets: {str(e)}")
+        st.error(f" Error conectando con secrets: {str(e)}")

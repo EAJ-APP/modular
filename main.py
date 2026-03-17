@@ -60,7 +60,7 @@ def show_main_app():
     st.set_page_config(
         page_title="BigQuery Shield | FLAT 101",
         layout=Settings.PAGE_LAYOUT,
-        page_icon="🛡️",
+        page_icon="",
         initial_sidebar_state="expanded"
     )
 
@@ -75,8 +75,8 @@ def show_main_app():
     client = SessionManager.get_bigquery_client()
 
     if not client:
-        st.error("❌ Error: No hay cliente de BigQuery disponible")
-        if st.button("🔄 Reiniciar sesión"):
+        st.error(" Error: No hay cliente de BigQuery disponible")
+        if st.button(" Reiniciar sesión"):
             SessionManager.logout()
             st.rerun()
         return
@@ -103,7 +103,7 @@ def show_main_app():
     st.divider()
 
     # Mostrar info de dataset seleccionado de forma compacta
-    with st.expander("ℹ️ Información del Proyecto", expanded=False):
+    with st.expander("ℹ Información del Proyecto", expanded=False):
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Proyecto", selected_project)
@@ -115,13 +115,13 @@ def show_main_app():
 
     # Tabs principales
     tab_titles = [
-        "🍪 Cookies",
-        "🛒 Ecommerce",
-        "📈 Adquisición",
-        "🎯 Eventos",
-        "👥 Usuarios",
-        "🕒 Sesiones",
-        "📊 Monitorización"
+        " Cookies",
+        " Ecommerce",
+        " Adquisición",
+        " Eventos",
+        " Usuarios",
+        " Sesiones",
+        " Monitorización"
     ]
     tab_ids = ["cookies", "ecommerce", "acquisition", "events", "users", "sessions", "monitoring"]
 
@@ -150,7 +150,7 @@ def show_main_app():
     with footer_col1:
         st.caption("© 2025 FLAT 101 Digital Business | BigQuery Shield")
     with footer_col2:
-        st.caption(f"📊 Analizando: {selected_project}.{selected_dataset}")
+        st.caption(f" Analizando: {selected_project}.{selected_dataset}")
     with footer_col3:
         st.caption(f"v1.0.0")
 
@@ -167,7 +167,7 @@ def render_header(selected_project=None):
             st.markdown("### FLAT 101")
 
     with col2:
-        st.title("🛡️ BigQuery Shield")
+        st.title(" BigQuery Shield")
         st.markdown("**Plataforma de análisis avanzado para Google Analytics 4**")
 
     with col3:
@@ -177,18 +177,18 @@ def render_header(selected_project=None):
 
         # Mostrar nombre del usuario
         if user_info.get('name'):
-            st.markdown(f"**👤 {user_info['name']}**")
+            st.markdown(f"** {user_info['name']}**")
 
         # Mostrar método de autenticación
         method_labels = {
-            'oauth': '🔐 OAuth',
-            'json': '📄 JSON',
-            'secrets': '🔑 Secrets'
+            'oauth': ' OAuth',
+            'json': ' JSON',
+            'secrets': ' Secrets'
         }
         st.caption(f"Método: {method_labels.get(auth_method, auth_method)}")
 
         # Botón de logout
-        if st.button("🚪 Cerrar Sesión", type="secondary", use_container_width=True):
+        if st.button(" Cerrar Sesión", type="secondary", use_container_width=True):
             SessionManager.logout()
             st.rerun()
 
@@ -198,28 +198,28 @@ def render_header(selected_project=None):
     billing_col1, billing_col2, billing_col3, billing_col4 = st.columns(4)
 
     with billing_col1:
-        st.markdown("**💰 Billing**")
+        st.markdown("** Billing**")
 
     with billing_col2:
         # Proyecto facturado
         billing_project = BillingCalculator.get_billing_project(selected_project)
-        st.caption(f"🏦 Factura a: **{billing_project}**")
+        st.caption(f" Factura a: **{billing_project}**")
 
     with billing_col3:
         # Información de última query
         last_query = BillingCalculator.get_last_query_info()
         if last_query:
-            st.caption(f"📊 Última Query: **{last_query['gb_used']:.3f} GB** • **${last_query['cost']:.6f}**")
+            st.caption(f" Última Query: **{last_query['gb_used']:.3f} GB** • **${last_query['cost']:.6f}**")
         else:
-            st.caption("📊 Última Query: **N/A**")
+            st.caption(" Última Query: **N/A**")
 
     with billing_col4:
         # Total de sesión
         session_info = BillingCalculator.get_session_total_info()
         if session_info['query_count'] > 0:
-            st.caption(f"💸 Total Sesión: **${session_info['total_cost']:.6f}** • **{session_info['total_gb']:.3f} GB**")
+            st.caption(f" Total Sesión: **${session_info['total_cost']:.6f}** • **{session_info['total_gb']:.3f} GB**")
         else:
-            st.caption("💸 Total Sesión: **$0.000000** • **0.000 GB**")
+            st.caption(" Total Sesión: **$0.000000** • **0.000 GB**")
 
 if __name__ == "__main__":
     main()
