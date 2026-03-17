@@ -193,22 +193,6 @@ def mostrar_atribucion_marketing(df):
     fig_eficiencia.update_layout(xaxis_tickangle=-45)
     st.plotly_chart(fig_eficiencia, use_container_width=True)
 
-    # Botón de análisis con IA
-    if st.button("Generar análisis con IA", key="btn_ia_atribucion_marketing"):
-        from utils.llm_insights import generar_insight_tabla
-        with st.spinner("Generando con LLM (IA)..."):
-            contexto = "Análisis de atribución de marketing por canal UTM en GA4. Incluye sesiones, conversiones, ingresos y tasas de conversión por fuente y medio."
-            resultado = generar_insight_tabla(df, contexto=contexto)
-            if resultado:
-                st.session_state['ia_atribucion_marketing'] = resultado
-            else:
-                st.session_state['ia_atribucion_marketing'] = None
-                st.error("No se pudo generar el análisis. Verifica la API key de Perplexity en secrets.toml.")
-
-    # Mostrar resultado persistido
-    if st.session_state.get('ia_atribucion_marketing'):
-        st.markdown(st.session_state['ia_atribucion_marketing'])
-
 def mostrar_atribucion_multimodelo(df):
     """Visualización para análisis de atribución multi-modelo"""
     st.subheader("Atribución Multi-Modelo")
