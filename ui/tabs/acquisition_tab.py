@@ -22,7 +22,7 @@ def show_acquisition_tab(client, project, dataset, start_date, end_date):
         st.session_state.show_attribution_results = False
     
     # Sección 1: Canales de Tráfico
-    with st.expander("🌐 Análisis de Canales de Tráfico", expanded=False):
+    with st.expander(" Análisis de Canales de Tráfico", expanded=False):
         st.info("Análisis de canales de marketing agrupados automáticamente")
         
         if st.button("Analizar Canales de Tráfico", key="btn_canales"):
@@ -32,7 +32,7 @@ def show_acquisition_tab(client, project, dataset, start_date, end_date):
                 mostrar_canales_trafico(df)
     
     # Sección 2: Atribución Básica
-    with st.expander("🎯 Atribución de Marketing", expanded=False):
+    with st.expander(" Atribución de Marketing", expanded=False):
         st.info("Análisis de atribución por parámetros UTM")
         
         if st.button("Análisis Básico UTM", key="btn_basica"):
@@ -42,7 +42,7 @@ def show_acquisition_tab(client, project, dataset, start_date, end_date):
                 mostrar_atribucion_marketing(df)
     
     # Sección 3: Atribución Multi-Modelo (3 modelos)
-    with st.expander("🔄 Atribución Multi-Modelo", expanded=False):
+    with st.expander(" Atribución Multi-Modelo", expanded=False):
         st.info("Análisis con 3 modelos de atribución")
         
         if st.button("Análisis 3 Modelos", key="btn_3modelos"):
@@ -52,11 +52,11 @@ def show_acquisition_tab(client, project, dataset, start_date, end_date):
                 mostrar_atribucion_multimodelo(df)
     
     # Sección 4: Atribución Completa (7 modelos)
-    with st.expander("🚀 Atribución Completa (7 Modelos)", expanded=st.session_state.show_attribution_results):
+    with st.expander(" Atribución Completa (7 Modelos)", expanded=st.session_state.show_attribution_results):
         st.info("""
         **Análisis completo con 7 modelos de atribución:**
         - Last Click, First Click, Linear
-        - Time Decay, Position Based  
+        - Time Decay, Position Based 
         - Last Non-Direct, Data Driven
         """)
         

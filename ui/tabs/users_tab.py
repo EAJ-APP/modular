@@ -52,7 +52,7 @@ def show_users_tab(client, project, dataset, start_date, end_date):
         st.session_state.users_monthly_conv_show = False
     
     # Sección 1: Retención Semanal
-    with st.expander("📅 Retención Semanal de Usuarios", expanded=st.session_state.users_retention_show):
+    with st.expander(" Retención Semanal de Usuarios", expanded=st.session_state.users_retention_show):
         st.info("""
         **Análisis de cohortes semanales:**
         - Trackea usuarios adquiridos cada semana (Semana 0)
@@ -72,7 +72,7 @@ def show_users_tab(client, project, dataset, start_date, end_date):
             mostrar_retencion_semanal(st.session_state.users_retention_data)
     
     # Sección 2: CLV y Sesiones
-    with st.expander("💰 Customer Lifetime Value (CLV) y Sesiones", expanded=st.session_state.users_clv_show):
+    with st.expander(" Customer Lifetime Value (CLV) y Sesiones", expanded=st.session_state.users_clv_show):
         st.info("""
         **Análisis de valor de usuario:**
         - Calcula el CLV de cada usuario
@@ -93,7 +93,7 @@ def show_users_tab(client, project, dataset, start_date, end_date):
             mostrar_clv_sesiones(st.session_state.users_clv_data)
     
     # Sección 3: Tiempo a Primera Compra
-    with st.expander("⏱️ Tiempo desde Primera Visita hasta Compra", expanded=st.session_state.users_time_purchase_show):
+    with st.expander("⏱ Tiempo desde Primera Visita hasta Compra", expanded=st.session_state.users_time_purchase_show):
         st.info("""
         **Análisis de velocidad de conversión:**
         - Mide días entre primera visita y primera compra
@@ -114,7 +114,7 @@ def show_users_tab(client, project, dataset, start_date, end_date):
             mostrar_tiempo_primera_compra(st.session_state.users_time_purchase_data)
     
     # Sección 4: Landing Page Attribution
-    with st.expander("🎯 Atribución por Primera Landing Page", expanded=st.session_state.users_landing_show):
+    with st.expander(" Atribución por Primera Landing Page", expanded=st.session_state.users_landing_show):
         st.info("""
         **Análisis de primera landing page:**
         - Atribuye eventos clave a la primera página visitada
@@ -135,7 +135,7 @@ def show_users_tab(client, project, dataset, start_date, end_date):
             mostrar_landing_page_attribution(st.session_state.users_landing_data)
     
     # Sección 5: Adquisición de Usuarios
-    with st.expander("📍 Adquisición de Usuarios por Fuente/Medio", expanded=st.session_state.users_acquisition_show):
+    with st.expander(" Adquisición de Usuarios por Fuente/Medio", expanded=st.session_state.users_acquisition_show):
         st.info("""
         **Análisis de canales de adquisición:**
         - Agrupa usuarios por fuente y medio
@@ -156,7 +156,7 @@ def show_users_tab(client, project, dataset, start_date, end_date):
             mostrar_adquisicion_usuarios(st.session_state.users_acquisition_data)
     
     # Sección 6: Conversión Mensual
-    with st.expander("📅 Tasa de Conversión Mensual", expanded=st.session_state.users_monthly_conv_show):
+    with st.expander(" Tasa de Conversión Mensual", expanded=st.session_state.users_monthly_conv_show):
         st.info("""
         **Análisis de conversión temporal:**
         - Tasa de conversión mes a mes

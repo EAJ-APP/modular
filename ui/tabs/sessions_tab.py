@@ -38,7 +38,7 @@ def show_sessions_tab(client, project, dataset, start_date, end_date):
         st.session_state.sessions_exit_show = False
     
     # Sección 1: Low Converting Sessions Analysis
-    with st.expander("🔍 Análisis de Sesiones con Baja Conversión", expanded=st.session_state.sessions_low_converting_show):
+    with st.expander(" Análisis de Sesiones con Baja Conversión", expanded=st.session_state.sessions_low_converting_show):
         st.info("""
         **Analiza sesiones que NO convirtieron para identificar:**
         - Fuentes de tráfico con alta tasa de no conversión
@@ -60,7 +60,7 @@ def show_sessions_tab(client, project, dataset, start_date, end_date):
             mostrar_low_converting_sessions(st.session_state.sessions_low_converting_data)
     
     # Sección 2: Session Path Analysis
-    with st.expander("🗺️ Análisis de Rutas de Navegación", expanded=st.session_state.sessions_path_show):
+    with st.expander(" Análisis de Rutas de Navegación", expanded=st.session_state.sessions_path_show):
         st.info("""
         **Analiza los caminos de navegación de los usuarios:**
         - Páginas de entrada más comunes (landing pages)
@@ -106,7 +106,7 @@ def show_sessions_tab(client, project, dataset, start_date, end_date):
             mostrar_hourly_sessions_performance(st.session_state.sessions_hourly_data)
     
     # Sección 4: Exit Pages Analysis
-    with st.expander("🚪 Análisis de Páginas de Salida", expanded=st.session_state.sessions_exit_show):
+    with st.expander(" Análisis de Páginas de Salida", expanded=st.session_state.sessions_exit_show):
         st.info("""
         **Identifica las páginas donde los usuarios abandonan:**
         - Top páginas con mayor tasa de abandono
@@ -130,4 +130,4 @@ def show_sessions_tab(client, project, dataset, start_date, end_date):
             mostrar_exit_pages_analysis(st.session_state.sessions_exit_data)
     
     # Mensaje de completado
-    st.success("✅ **Todas las consultas de Sesiones están disponibles!**")
+    st.success(" **Todas las consultas de Sesiones están disponibles!**")

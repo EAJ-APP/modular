@@ -11,12 +11,12 @@ def render_sidebar():
         try:
             st.image("assets/logo.png", width=120)
         except:
-            st.markdown("### 🛡️ BigQuery Shield")
+            st.markdown("### BigQuery Shield")
         
         st.divider()
         
         # Rango de fechas más visible
-        st.markdown("### 📅 Período de Análisis")
+        st.markdown("### Período de Análisis")
         start_date = st.date_input(
             "Fecha inicio", 
             value=Settings.DEFAULT_START_DATE, 
@@ -33,20 +33,20 @@ def render_sidebar():
         # Mostrar duración del período
         days_diff = (end_date - start_date).days
         if days_diff > 0:
-            st.info(f"📊 Analizando **{days_diff} días** de datos")
+            st.info(f" Analizando **{days_diff} días** de datos")
         elif days_diff == 0:
-            st.warning("⚠️ Selecciona un rango de fechas válido")
+            st.warning(" Selecciona un rango de fechas válido")
         else:
-            st.error("❌ La fecha de inicio debe ser anterior a la fecha de fin")
+            st.error(" La fecha de inicio debe ser anterior a la fecha de fin")
         
         st.divider()
         
         # Links útiles
-        with st.expander("🔗 Enlaces Útiles", expanded=False):
+        with st.expander(" Enlaces Útiles", expanded=False):
             st.markdown("""
-            - [📖 Documentación GA4](https://support.google.com/analytics)
-            - [💡 Guía BigQuery](https://cloud.google.com/bigquery/docs)
-            - [🎯 FLAT 101 Digital](https://flat101.es)
+            - [ Documentación GA4](https://support.google.com/analytics)
+            - [ Guía BigQuery](https://cloud.google.com/bigquery/docs)
+            - [ FLAT 101 Digital](https://flat101.es)
             """)
         
         # Información de versión al final
@@ -134,15 +134,15 @@ def get_ga4_projects_and_datasets(client: bigquery.Client):
 def get_project_dataset_selection(client):
     """Obtiene la selección de proyecto y dataset - Solo GA4"""
     try:
-        st.sidebar.markdown("### 🗄️ Fuente de Datos (GA4)")
+        st.sidebar.markdown("### Fuente de Datos (GA4)")
         
         # Mostrar spinner mientras se cargan proyectos
         with st.sidebar:
-            with st.spinner("🔍 Buscando proyectos con GA4..."):
+            with st.spinner(" Buscando proyectos con GA4..."):
                 ga4_projects = get_ga4_projects_and_datasets(client)
         
         if not ga4_projects:
-            st.sidebar.error("⚠️ No se encontraron proyectos con datasets de GA4")
+            st.sidebar.error(" No se encontraron proyectos con datasets de GA4")
             st.sidebar.info("""
             **Posibles causas:**
             - No tienes acceso a proyectos con GA4
@@ -151,10 +151,10 @@ def get_project_dataset_selection(client):
             """)
             
             # Mostrar botón para ver todos los proyectos (debug)
-            if st.sidebar.button("🔧 Mostrar todos los proyectos (debug)"):
+            if st.sidebar.button(" Mostrar todos los proyectos (debug)"):
                 st.sidebar.write("**Proyectos disponibles:**")
                 all_projects = list(client.list_projects())
-                for proj in all_projects[:10]:  # Limitar a 10
+                for proj in all_projects[:10]: # Limitar a 10
                     st.sidebar.code(proj.project_id)
             
             return None, None
@@ -195,7 +195,7 @@ def get_project_dataset_selection(client):
         )
         
         # Mostrar información adicional del dataset
-        with st.sidebar.expander("ℹ️ Info del Dataset", expanded=False):
+        with st.sidebar.expander("ℹ Info del Dataset", expanded=False):
             try:
                 dataset_ref = f"{selected_project}.{selected_dataset}"
                 tables = list(client.list_tables(dataset_ref, max_results=100))
@@ -224,7 +224,7 @@ def get_project_dataset_selection(client):
                 st.write(f"Error obteniendo info: {e}")
         
         # Indicador visual de conexión exitosa
-        st.sidebar.success("✅ Conectado a dataset GA4")
+        st.sidebar.success(" Conectado a dataset GA4")
         
         return selected_project, selected_dataset
         
