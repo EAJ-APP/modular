@@ -196,7 +196,7 @@ def show_cookies_tab(client, project, dataset, start_date, end_date):
     st.success(" **Todas las consultas de Cookies y Privacidad están disponibles!**")
     
     # Información adicional sobre GDPR y privacidad
-    with st.expander("ℹ Información sobre GDPR y Compliance", expanded=False):
+    with st.expander("Información sobre GDPR y Compliance", expanded=False):
         st.markdown("""
         ### Guía de Cumplimiento GDPR
         
