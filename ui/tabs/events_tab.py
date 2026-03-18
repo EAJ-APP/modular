@@ -77,7 +77,7 @@ def show_events_tab(client, project, dataset, start_date, end_date):
             mostrar_eventos_resumen(st.session_state.events_resumen_data)
     
     # Sección 3: Evolución Temporal
-    with st.expander(" Evolución Temporal de Eventos", expanded=st.session_state.events_fecha_show):
+    with st.expander(" Evolución Temporal de Eventos [IA]", expanded=st.session_state.events_fecha_show):
         st.info("Análisis de la evolución de eventos a lo largo del tiempo")
         
         if st.button("Analizar Evolución", key="btn_eventos_fecha"):

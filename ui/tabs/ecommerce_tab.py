@@ -88,7 +88,7 @@ def show_ecommerce_tab(client, project, dataset, start_date, end_date):
             mostrar_ingresos_transacciones(st.session_state.ecommerce_ingresos_data)
     
     # Sección 3: Productos Más Vendidos
-    with st.expander(" Productos Más Vendidos", expanded=st.session_state.ecommerce_productos_show):
+    with st.expander(" Productos Más Vendidos [IA]", expanded=st.session_state.ecommerce_productos_show):
         st.info("""
         **Performance de productos por ingresos:**
         - Top productos ordenados por revenue

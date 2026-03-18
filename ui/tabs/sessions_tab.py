@@ -60,7 +60,7 @@ def show_sessions_tab(client, project, dataset, start_date, end_date):
             mostrar_low_converting_sessions(st.session_state.sessions_low_converting_data)
     
     # Sección 2: Session Path Analysis
-    with st.expander(" Análisis de Rutas de Navegación", expanded=st.session_state.sessions_path_show):
+    with st.expander(" Análisis de Rutas de Navegación [IA]", expanded=st.session_state.sessions_path_show):
         st.info("""
         **Analiza los caminos de navegación de los usuarios:**
         - Páginas de entrada más comunes (landing pages)

@@ -114,7 +114,7 @@ def show_users_tab(client, project, dataset, start_date, end_date):
             mostrar_tiempo_primera_compra(st.session_state.users_time_purchase_data)
     
     # Sección 4: Landing Page Attribution
-    with st.expander(" Atribución por Primera Landing Page", expanded=st.session_state.users_landing_show):
+    with st.expander(" Atribución por Primera Landing Page [IA]", expanded=st.session_state.users_landing_show):
         st.info("""
         **Análisis de primera landing page:**
         - Atribuye eventos clave a la primera página visitada

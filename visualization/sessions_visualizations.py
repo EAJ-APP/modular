@@ -966,12 +966,7 @@ def mostrar_session_path_analysis(df):
             mime="text/csv"
         )
 
-    # Sección de análisis con IA
-    st.markdown("""
-    <div style="border-left: 4px solid #6366f1; background: linear-gradient(90deg, rgba(99, 102, 241, 0.1) 0%, transparent 100%); padding: 0.75rem 1rem; border-radius: 0 8px 8px 0; margin: 1rem 0 0.5rem 0;">
-        <span style="color: #6366f1; font-weight: 600; font-size: 0.9rem;">Analisis con IA disponible</span>
-    </div>
-    """, unsafe_allow_html=True)
+    # Botón de análisis con IA
     if st.button("Generar análisis con IA", key="btn_ia_session_paths"):
         from utils.llm_insights import generar_insight_tabla
         with st.spinner("Generando con LLM (IA)..."):
