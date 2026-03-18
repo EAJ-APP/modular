@@ -55,7 +55,27 @@ def show_cookies_tab(client, project, dataset, start_date, end_date):
     # ==========================================
     # SECCIÓN 1: Evolución Temporal (NUEVO)
     # ==========================================
-    with st.expander(" Evolución Temporal del Consentimiento [IA]",
+    # CSS para destacar el primer expander (Evolución Temporal con IA)
+    st.markdown("""
+    <style>
+    /* Primer expander - Evolución Temporal con IA */
+    section[data-testid="stMain"] div[data-testid="stExpander"]:first-of-type {
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%) !important;
+        border: 2px solid #3b82f6 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3) !important;
+    }
+    section[data-testid="stMain"] div[data-testid="stExpander"]:first-of-type > details {
+        background: transparent !important;
+    }
+    section[data-testid="stMain"] div[data-testid="stExpander"]:first-of-type summary {
+        color: #60a5fa !important;
+        font-weight: 600 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    with st.expander("🤖 Evolución Temporal del Consentimiento [IA]",
                      expanded=st.session_state.cookies_evolucion_show):
         st.info("""
         **Análisis de tendencias día a día:**
