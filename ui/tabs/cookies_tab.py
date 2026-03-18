@@ -55,7 +55,7 @@ def show_cookies_tab(client, project, dataset, start_date, end_date):
     # ==========================================
     # SECCIÓN 1: Evolución Temporal (NUEVO)
     # ==========================================
-    with st.expander(" Evolución Temporal del Consentimiento", 
+    with st.expander(" Evolución Temporal del Consentimiento [IA]",
                      expanded=st.session_state.cookies_evolucion_show):
         st.info("""
         **Análisis de tendencias día a día:**
