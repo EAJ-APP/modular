@@ -198,7 +198,7 @@ def render_header(selected_project=None):
     billing_col1, billing_col2, billing_col3, billing_col4 = st.columns(4)
 
     with billing_col1:
-        st.markdown("** Billing**")
+        st.markdown("**Facturación**")
 
     with billing_col2:
         # Proyecto facturado
